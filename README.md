@@ -31,7 +31,10 @@ Planned features:
 * Transmitting Can Frames to connected CAN-bus
 
 # License
-Author : Minsung Kim <alstjd025@naver.com>   
+Author : 
+  * Minsung Kim <alstjd025@naver.com>   
+  * Heesoo Kim <mlksvender@gmail.com>
+  * Jonghyeok Yoo <youjong12@naver.com>
 Mobility Intelligence & Computing Systems Laboratory, Soongsil University.    
 Use only in ICHTHUS2022 Project for 2022 University Student Autonomous Driving Competition, MOTIE, Korea government.     
 
