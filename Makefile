@@ -27,7 +27,7 @@ endif
 #
 CPP = g++
 CPPFLAGS += -fdiagnostics-color=auto
-CPPFLAGS += -std=gnu++14
+CPPFLAGS += -std=gnu++17
 CPPFLAGS += -Wall -Wextra -pedantic
 CPPFLAGS += -g
 CPPFLAGS += -O3
@@ -35,8 +35,11 @@ CPPFLAGS += -O3
 # Required for linking to shared library:
 CPPFLAGS += -fPIC
 
-CPPFLAGS += -I$(INCDIR)
-CPPFLAGS += -lpthread
+CPPFLAGS += -I$(INCDIR) -I/home/misys/libcan
+CPPFLAGS += -pthread
+CPPFLAGS += -L/home/misys/libcan/
+CPPFLAGS += -ldbcppp
+
 
 RM = rm -f
 

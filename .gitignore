@@ -5,7 +5,7 @@
 *.elf
 *.exe
 *.bin
-*.so
+
 test
 test-pcan
 test-pcan.exe
