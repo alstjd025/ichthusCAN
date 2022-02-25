@@ -91,8 +91,6 @@ void SocketCAN::open(char* interface)
     }
     printf("Successfully bound socket to interface %d.\n", if_request.ifr_ifindex);
 
-    // Start a separate, event-driven thread for frame reception
-    start_receiver_thread();
 }
 
 
@@ -127,13 +125,13 @@ void SocketCAN::transmit(can_frame_t* frame)
     }
 
     // TODO
+    
     printf("Transmission via SocketCAN is not yet implemented.\n");
 }
 
 
 static void* socketcan_receiver_thread(void* argv)
 {
-    printf("started \n");
     /*
      * The first and only argument to this function
      * is the pointer to the object, which started the thread.
@@ -155,46 +153,35 @@ static void* socketcan_receiver_thread(void* argv)
     // Run until termination signal received
     while (!sock->terminate_receiver_thread)
     {
-        printf("asdf \n");
         // Clear descriptor set
         FD_ZERO(&descriptors);
         // Add socket descriptor
         FD_SET(sock->sockfd, &descriptors);
-//        printf("Added %d to monitored descriptors.\n", sock->sockfd);
 
         // Set timeout
-        timeout.tv_sec  = 100;
+        timeout.tv_sec  = 5;
         timeout.tv_usec = 0;
         // Wait until timeout or activity on any descriptor
         if (select(maxfd+1, &descriptors, NULL, NULL, &timeout) == 1)
         {
-//            printf("Something happened.\n");
             int len = read(sock->sockfd, &rx_frame, CAN_MTU);
 //            printf("Received %d bytes: Frame from 0x%0X, DLC=%d\n", len, rx_frame.can_id, rx_frame.can_dlc);
             
             if (len < 0)
                 continue;
-            if (sock->parser != NULL)
-            {
-//                printf("Invoking parser...\n");
-                sock->parser->parse_frame(&rx_frame);
-            }
             if (sock->reception_handler != NULL)
             {
                 sock->reception_handler(&rx_frame);
             }
-            else
-            {
-//                printf("sock->parser is NULL.\n");
-            }
         }
         else
         {
-//            printf("Received nothing.\n");
+            printf("[RX] Nothing to Receieve.\n");
+            sock->terminate_receiver_thread = true;
         }
     }
 
-    printf("Receiver thread terminated.\n");
+    printf("[RX] Thread terminated.\n");
 
     // Thread terminates
     return NULL;
@@ -209,7 +196,6 @@ void SocketCAN::start_receiver_thread()
      * See also: https://www.thegeekstuff.com/2012/04/create-threads-in-linux/
      */
     terminate_receiver_thread = false;
-    std::cout << "Asdasd \n";
     int rc = pthread_create(&receiver_thread_id, NULL, &socketcan_receiver_thread, this);
     if (rc != 0)
     {
@@ -217,7 +203,9 @@ void SocketCAN::start_receiver_thread()
         return;
     }
     printf("Successfully started receiver thread with ID %d.\n", (int) receiver_thread_id);
-    sleep(100);
+    // Wait 6 sec for termination of receiver thread if there's nothing to receive.
+    // Can only transmitt can_frame after this wait
+    sleep(6);
 }
 
 #endif

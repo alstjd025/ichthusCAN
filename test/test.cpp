@@ -67,11 +67,15 @@ void test_socketcan()
 
     SocketCAN* adapter = new SocketCAN();
     adapter->reception_handler = &rx_handler;
+    
     adapter->open("vcan0");
+    
+    adapter->start_receiver_thread();
+    
 
 
     sleep(3);
-
+    printf("Starts Transmit test \n");
 /*
     can_frame_t frame;
     frame.can_id = 0x123;
