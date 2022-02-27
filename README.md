@@ -5,6 +5,22 @@ ichthusCAN
 This repository contains code for CAN(Control Area Network) Communication in C/C++ & Decode 
 
 # HowToUse
+// How To Test in VCAN0 (Virtual Can)    
+//     
+// 'sudo apt install net-tools'    
+// 'sudo apt install can-utils'    
+// 'sudo modprobe vcan'    
+// 'sudo ip link add dev vcan0 type vcan'    
+// 'sudo ip link set up vcan0'    
+// 'candump vcan0'    
+//     
+// After this, just open another terminal and command    
+// 'cansend vcan0 386#11.11.11.11.11.11.11.11'    
+// And you can see the message you've sent shows right up in candump terminal.    
+//     
+// In libcan directory where libcan.so and other so files exist, command 'make'       
+// CD into test directory and 'make'    
+// Now you can run test programm with './test hyundai_kia_generic.dbc'     
 
 
 # libcan
