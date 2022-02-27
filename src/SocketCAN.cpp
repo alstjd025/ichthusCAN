@@ -63,6 +63,7 @@ void SocketCAN::open(char* interface)
 
     // Get the index of the network interface
     strncpy(if_request.ifr_name, interface, IFNAMSIZ);
+    //if (ioctl(sockfd, SIOCGIFINDEX, &if_request) == -1)
     if (ioctl(sockfd, SIOCGIFINDEX, &if_request) == -1)
     {
         printf("Unable to select CAN interface %s: I/O control error\n", interface);
@@ -117,7 +118,8 @@ bool SocketCAN::is_open()
 
 void SocketCAN::transmit(can_frame_t* frame)
 {
-    CANAdapter::transmit(frame);
+    int nbytes;
+    //CANAdapter::transmit(frame);
     if (!is_open())
     {
         printf("Unable to transmit: Socket not open\n");
@@ -125,8 +127,16 @@ void SocketCAN::transmit(can_frame_t* frame)
     }
 
     // TODO
-    
-    printf("Transmission via SocketCAN is not yet implemented.\n");
+    printf("Write Data to FD %d  \n", sockfd);
+    printf("Writes Frame from 0x%0X, DLC=%d\n", frame->can_id, frame->can_dlc);
+    //nbytes = sendto(sockfd, &frame, CAN_MTU, 0, (struct sockaddr*)&addr, sizeof(addr));
+    nbytes = write(sockfd, &frame, CAN_MTU);
+    sleep(1);
+    if(nbytes < 0){
+        printf("Write Failed %d bytes \n", nbytes);
+        return;
+    }
+    printf("Write succeed %d bytes\n", nbytes);
 }
 
 
@@ -159,10 +169,10 @@ static void* socketcan_receiver_thread(void* argv)
         FD_SET(sock->sockfd, &descriptors);
 
         // Set timeout
-        timeout.tv_sec  = 5;
+        timeout.tv_sec  = 10;
         timeout.tv_usec = 0;
         // Wait until timeout or activity on any descriptor
-        if (select(maxfd+1, &descriptors, NULL, NULL, &timeout) == 1)
+        if (select(maxfd+1, &descriptors, NULL, NULL, NULL) == 1)
         {
             int len = read(sock->sockfd, &rx_frame, CAN_MTU);
 //            printf("Received %d bytes: Frame from 0x%0X, DLC=%d\n", len, rx_frame.can_id, rx_frame.can_dlc);
@@ -202,10 +212,10 @@ void SocketCAN::start_receiver_thread()
         printf("Unable to start receiver thread.\n");
         return;
     }
-    printf("Successfully started receiver thread with ID %d.\n", (int) receiver_thread_id);
+    printf("Successfully started receiver thread with ID %lu.\n", receiver_thread_id);
     // Wait 6 sec for termination of receiver thread if there's nothing to receive.
     // Can only transmitt can_frame after this wait
-    sleep(6);
+    
 }
 
 #endif

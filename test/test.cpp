@@ -16,6 +16,30 @@
 #include "dbcppp/Network.h"
 
 
+/*
+// How To Test in VCAN0 (Virtual Can)
+// 
+// 'sudo apt install net-tools'
+// 'sudo apt install can-utils'
+// 'sudo modprobe vcan'
+// 'sudo ip link add dev vcan0 type vcan'
+// 'sudo ip link set up vcan0'
+// 'candump vcan0'
+// 
+// After this, just open another terminal and command
+// 'cansend vcan0 386#11.11.11.11.11.11.11.11'
+// And you can see the message you've sent shows right up in candump terminal.
+// 
+// In libcan directory where libcan.so and other so files exist, command 'make'   
+// CD into test directory and 'make'
+// Now you can run test programm with './test hyundai_kia_generic.dbc'
+//
+//
+*/
+
+
+
+
 std::unique_ptr<dbcppp::INetwork> net;
 std::unordered_map<uint64_t, const dbcppp::IMessage*> messages;
 
@@ -70,21 +94,23 @@ void test_socketcan()
     
     adapter->open("vcan0");
     
-    adapter->start_receiver_thread();
-    
+    //adapter->start_receiver_thread();
 
-
-    sleep(3);
     printf("Starts Transmit test \n");
-/*
+
     can_frame_t frame;
-    frame.can_id = 0x123;
-    frame.can_dlc = 3;
+    frame.can_id = 0x386;
+    frame.can_dlc = 7;
     frame.data[0] = 1;
-    frame.data[1] = 2;
-    frame.data[2] = 3;
+    frame.data[1] = 1;
+    frame.data[2] = 1;
+    frame.data[3] = 1;
+    frame.data[4] = 1;
+    frame.data[5] = 1;
+    frame.data[6] = 1;
     adapter->transmit(&frame);
-*/
+
+    //pthread_join(adapter->receiver_thread_id, NULL);
     delete adapter;
     sleep(1.1);
 }

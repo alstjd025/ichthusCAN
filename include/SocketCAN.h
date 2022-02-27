@@ -38,9 +38,9 @@ class SocketCAN: public CANAdapter
 
     can_socket_address_t addr;
 
-    pthread_t receiver_thread_id;
 
   public:
+    pthread_t receiver_thread_id;
     /**
      * CAN socket file descriptor
      */
