@@ -1,5 +1,7 @@
 
-// sleep
+//vector find
+#include <algorithm>
+// sleep, socket
 #include <unistd.h>
 // printf
 #include <stdio.h>
@@ -9,7 +11,6 @@
 #include <SLCAN.h>
 
 //dbcppp headers
-
 #include <fstream>
 #include <unordered_map>
 #include "dbcppp/CApi.h"
@@ -39,10 +40,11 @@
 
 
 
-
 std::unique_ptr<dbcppp::INetwork> net;
 std::unordered_map<uint64_t, const dbcppp::IMessage*> messages;
 
+
+//  ADD All Messages in DBC file
 void load_dbc(){
     std::cout << "Loading DBC \n";
 
@@ -50,12 +52,50 @@ void load_dbc(){
         std::ifstream idbc("hyundai_kia_generic.dbc");
         net = dbcppp::INetwork::LoadDBCFromIs(idbc);
     }
-
+    
     for (const dbcppp::IMessage& msg : net->Messages())
     {
-
         messages.insert(std::make_pair(msg.Id(), &msg));
     }
+}
+
+
+//  ADD Unique Message(vector) in DBC file
+void load_dbc(std::vector<uint64_t>& id){
+    std::cout << "Loading DBC \n";
+    
+    {
+        std::ifstream idbc("hyundai_kia_generic.dbc");
+        net = dbcppp::INetwork::LoadDBCFromIs(idbc);
+    }
+
+    
+    for (const dbcppp::IMessage& msg : net->Messages())
+    {
+        auto iter = find(id.begin(), id.end(), msg.Id());
+        if(iter != id.end()){    
+            messages.insert(std::make_pair(msg.Id(), &msg));
+        }
+    }
+}
+
+void rx_ichthus_handler(can_frame_t* frame)
+{
+    auto iter = messages.find(frame->can_id);
+    if (iter != messages.end())
+    {
+        const dbcppp::IMessage* msg = iter->second;
+        for (const dbcppp::ISignal& sig : msg->Signals())
+        {
+            const dbcppp::ISignal* mux_sig = msg->MuxSignal();
+            if (sig.MultiplexerIndicator() != dbcppp::ISignal::EMultiplexer::MuxValue ||
+                (mux_sig && mux_sig->Decode(frame->data) == sig.MultiplexerSwitchValue()))
+            {
+                std::cout << sig.RawToPhys(sig.Decode(frame->data)) << sig.Unit() << "\n";
+            }
+        }
+    }
+
 }
 
 void rx_handler(can_frame_t* frame)
@@ -87,15 +127,21 @@ void test_socketcan()
 {
     printf("\nTesting SocketCAN adapter\n");
     printf("#############################\n");
-    load_dbc();
+    std::vector<uint64_t> id;
+    id.push_back(688);  //SAS11         SAS_ANGLE, SAS_SPEED
+    id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
+    id.push_back(881);  //E_EMS11       ACC PEDAL POS, BEK PEDAL POS
+    id.push_back(544);  //ESP12         LONG_ACCEL, LAT_ACCEL, YAW_RATE
+    load_dbc(id);
 
     SocketCAN* adapter = new SocketCAN();
-    adapter->reception_handler = &rx_handler;
+    adapter->reception_handler = &rx_ichthus_handler;
     
     adapter->open("vcan0");
     
-    //adapter->start_receiver_thread();
+    adapter->start_receiver_thread();
 
+/*
     printf("Starts Transmit test \n");
 
     can_frame_t frame;
@@ -108,9 +154,9 @@ void test_socketcan()
     frame.data[4] = 1;
     frame.data[5] = 1;
     frame.data[6] = 1;
-    adapter->transmit(&frame);
-
-    //pthread_join(adapter->receiver_thread_id, NULL);
+    adapter->transmit(frame);
+*/
+    pthread_join(adapter->receiver_thread_id, NULL);
     delete adapter;
     sleep(1.1);
 }

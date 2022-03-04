@@ -45,7 +45,7 @@ SocketCAN::~SocketCAN()
     printf("Destroying SocketCAN adapter...\n");
     if (this->is_open())
     {
-        this->close();
+        //this->close();
     }
 }
 
@@ -116,7 +116,7 @@ bool SocketCAN::is_open()
 }
 
 
-void SocketCAN::transmit(can_frame_t* frame)
+void SocketCAN::transmit(can_frame_t& frame)
 {
     int nbytes;
     //CANAdapter::transmit(frame);
@@ -125,13 +125,7 @@ void SocketCAN::transmit(can_frame_t* frame)
         printf("Unable to transmit: Socket not open\n");
         return;
     }
-
-    // TODO
-    printf("Write Data to FD %d  \n", sockfd);
-    printf("Writes Frame from 0x%0X, DLC=%d\n", frame->can_id, frame->can_dlc);
-    //nbytes = sendto(sockfd, &frame, CAN_MTU, 0, (struct sockaddr*)&addr, sizeof(addr));
-    nbytes = write(sockfd, &frame, CAN_MTU);
-    sleep(1);
+    nbytes = write(sockfd, &frame, sizeof(can_frame_t));
     if(nbytes < 0){
         printf("Write Failed %d bytes \n", nbytes);
         return;

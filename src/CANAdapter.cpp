@@ -18,7 +18,7 @@ CANAdapter::~CANAdapter()
 }
 
 
-void CANAdapter::transmit(can_frame_t*)
+void CANAdapter::transmit(can_frame_t&)
 {
     if (adapter_type == ADAPTER_NONE)
     {

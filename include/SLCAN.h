@@ -94,7 +94,7 @@ class SLCAN: public CANAdapter
     /**
      * Sends the referenced frame to the bus
      */
-    void transmit(can_frame_t*);
+    void transmit(can_frame_t&);
 
     /**
      * Starts a new thread, that will wait for socket events

@@ -34,12 +34,10 @@ typedef struct sockaddr_can can_socket_address_t;
 class SocketCAN: public CANAdapter
 {
   private:
+  public:
     interface_request_t if_request;
 
     can_socket_address_t addr;
-
-
-  public:
     pthread_t receiver_thread_id;
     /**
      * CAN socket file descriptor
@@ -77,7 +75,7 @@ class SocketCAN: public CANAdapter
     /**
      * Sends the referenced frame to the bus
      */
-    void transmit(can_frame_t*);
+    void transmit(can_frame_t&);
 
     /**
      * Starts a new thread, that will wait for socket events

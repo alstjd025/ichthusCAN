@@ -58,7 +58,7 @@ class CANAdapter
 	/**
 	 * Sends the referenced frame to the bus
 	 */
-	virtual void transmit(can_frame_t*);
+	virtual void transmit(can_frame_t&);
 };
 
 #endif

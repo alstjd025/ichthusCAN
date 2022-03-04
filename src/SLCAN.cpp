@@ -88,7 +88,7 @@ bool SLCAN::is_open()
 }
 
 
-void SLCAN::transmit(can_frame_t* frame)
+void SLCAN::transmit(can_frame_t& frame)
 {
     CANAdapter::transmit(frame);
 
