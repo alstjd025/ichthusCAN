@@ -43,8 +43,8 @@
 std::unique_ptr<dbcppp::INetwork> net;
 std::unordered_map<uint64_t, const dbcppp::IMessage*> messages;
 
-
-//  ADD All Messages in DBC file
+//  DBC LOADER FUNCTION
+//  ADD All Messages in DBC file to parser object
 void load_dbc(){
     std::cout << "Loading DBC \n";
 
@@ -59,8 +59,8 @@ void load_dbc(){
     }
 }
 
-
-//  ADD Unique Message(vector) in DBC file
+//  DBC LOADER FUNCTION
+//  ADD Unique Message(vector) in DBC file to parser object
 void load_dbc(std::vector<uint64_t>& id){
     std::cout << "Loading DBC \n";
     
@@ -91,6 +91,8 @@ void rx_ichthus_handler(can_frame_t* frame)
             if (sig.MultiplexerIndicator() != dbcppp::ISignal::EMultiplexer::MuxValue ||
                 (mux_sig && mux_sig->Decode(frame->data) == sig.MultiplexerSwitchValue()))
             {
+                // TODO
+                // MAKE THIS MESSAGE TO ROS2 MESSAGE
                 std::cout << sig.RawToPhys(sig.Decode(frame->data)) << sig.Unit() << "\n";
             }
         }
@@ -125,13 +127,15 @@ void rx_handler(can_frame_t* frame)
 
 void test_socketcan()
 {
-    printf("\nTesting SocketCAN adapter\n");
+    printf("\nStarts KIA CAN Reciever\n");
     printf("#############################\n");
+    
     std::vector<uint64_t> id;
     id.push_back(688);  //SAS11         SAS_ANGLE, SAS_SPEED
     id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
     id.push_back(881);  //E_EMS11       ACC PEDAL POS, BEK PEDAL POS
     id.push_back(544);  //ESP12         LONG_ACCEL, LAT_ACCEL, YAW_RATE
+    
     load_dbc(id);
 
     SocketCAN* adapter = new SocketCAN();
