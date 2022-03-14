@@ -149,7 +149,7 @@ void open_kiacan_start_pid(){
     load_dbc(id);
     SocketCAN* adapter = new SocketCAN();
     adapter->reception_handler = &rx_ichthus_handler;
-    adapter->open("can0");
+    adapter->open("vcan0");
     adapter->start_receiver_thread();
     std::cout << "Object Value (km/h?) : ";
     std::cin >> obj;
