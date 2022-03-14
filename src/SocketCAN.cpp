@@ -216,7 +216,6 @@ void SocketCAN::pid_control(float obj){
         qlock.lock();
         if(velocity->empty()){ // :(
             qlock.unlock();
-            
         }
         else{
             float currenct_velocity = velocity->front();
