@@ -10,7 +10,8 @@
 #include <unistd.h>
 #include <CANFrame.h>
 #include <CANFrameParser.h>
-
+#include <queue>
+#include <mutex>
 
 /**
  * Specifies the type of a CAN adapter
@@ -26,7 +27,7 @@ typedef enum
 /**
  * How a frame reception handler should look like
  */
-typedef void (*reception_handler_t)(can_frame_t*);
+typedef void (*reception_handler_t)(can_frame_t*, std::queue<float>* velocity, std::mutex& qlock);
 
 
 /**

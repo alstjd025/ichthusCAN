@@ -16,6 +16,9 @@
 #include <pthread.h>
 #include <iostream>
 
+#include <queue>
+#include <mutex>
+
 
 /**
  * Interface request structure used for socket ioctl's
@@ -36,9 +39,10 @@ class SocketCAN: public CANAdapter
   private:
   public:
     interface_request_t if_request;
-
     can_socket_address_t addr;
     pthread_t receiver_thread_id;
+    std::queue<float>* velocity;
+    std::mutex qlock;
     /**
      * CAN socket file descriptor
      */
@@ -58,7 +62,7 @@ class SocketCAN: public CANAdapter
      * Open and bind socket
      */
     void open(char*);
-
+    
     /**
      * Close and unbind socket
      */
@@ -81,6 +85,10 @@ class SocketCAN: public CANAdapter
      * Starts a new thread, that will wait for socket events
      */
     void start_receiver_thread();
+  
+    void pid_control(float obj);
+
+    void make_can_frame(int id, float value, can_frame_t* data);
 };
 
 #endif

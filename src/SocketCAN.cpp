@@ -35,6 +35,7 @@ SocketCAN::SocketCAN()
     sockfd(-1),
     receiver_thread_id(0)
 {
+    velocity = new std::queue<float>;
     adapter_type = ADAPTER_SOCKETCAN;
     printf("SocketCAN adapter created.\n");
 }
@@ -161,7 +162,7 @@ static void* socketcan_receiver_thread(void* argv)
         FD_ZERO(&descriptors);
         // Add socket descriptor
         FD_SET(sock->sockfd, &descriptors);
-
+        
         // Set timeout
         timeout.tv_sec  = 10;
         timeout.tv_usec = 0;
@@ -169,13 +170,11 @@ static void* socketcan_receiver_thread(void* argv)
         if (select(maxfd+1, &descriptors, NULL, NULL, NULL) == 1)
         {
             int len = read(sock->sockfd, &rx_frame, CAN_MTU);
-//            printf("Received %d bytes: Frame from 0x%0X, DLC=%d\n", len, rx_frame.can_id, rx_frame.can_dlc);
-            
             if (len < 0)
                 continue;
             if (sock->reception_handler != NULL)
             {
-                sock->reception_handler(&rx_frame);
+                sock->reception_handler(&rx_frame, sock->velocity, sock->qlock);
             }
         }
         else
@@ -209,6 +208,26 @@ void SocketCAN::start_receiver_thread()
     printf("Successfully started receiver thread with ID %lu.\n", receiver_thread_id);
     // Wait 6 sec for termination of receiver thread if there's nothing to receive.
     // Can only transmitt can_frame after this wait
+    
+}
+
+void SocketCAN::pid_control(float obj){
+    while(true){
+        qlock.lock();
+        if(velocity->empty()){ // :(
+            qlock.unlock();
+        }
+        else{
+            float currenct_velocity = velocity->front();
+            velocity->pop();
+            std::cout << "pid :: " << currenct_velocity << "\n";
+            qlock.unlock();
+        }
+    }
+}
+
+void SocketCAN::make_can_frame(int id, float value, can_frame_t* data){
+    data->can_id = id;
     
 }
 
