@@ -218,10 +218,52 @@ void SocketCAN::pid_control(float obj){
             qlock.unlock();
         }
         else{
+            can_frame_t* send_data;
             float currenct_velocity = velocity->front();
             velocity->pop();
             std::cout << "pid :: " << currenct_velocity << "\n";
             qlock.unlock();
+
+            float velocity_error;
+
+            float Kp = 0;
+            float Ki = 0;
+            float Kd = 0;
+            float Tf = 0; // 시간필터
+
+
+            velocity_error = obj - currenct_velocity;
+
+            float max_output = 0.1; // 속도 신호의 최댓값
+            float max_rate = 0; //  error 값의 최댓값 (사용할지 말지 추후 결정)
+            
+
+            // if(velocity_error >= max_rate){
+            //     velocity_error = max_rate;
+            // } (error값의 최댓값을 정하면 해당과 같이 코딩)
+            
+            p_term = Kp * velocity_error;
+            i_term = Ki * integral;
+            d_term = Kd * (velocity_error - velocity_error_last)*0.02;
+
+            output = p_term+ + i_term + d_term; // pid 계산값
+
+            // timefilter = Tf * (output - output_last)/0.02; (시간필터를 적용할것인지 추후결정)
+
+            // output = output _ timefilter;
+
+            if(output >= max_output){
+                output = max_output;
+            }else if( output <= -max_output){
+                output = 0;
+            }else{
+                integral += (velocity_error * 0.02);
+            }
+
+            make_can_frame(/*id of speed*/, output, send_data);
+
+            write(/*can0*/, send_data, sizeof(can_frame_t));
+
         }
     }
 }
