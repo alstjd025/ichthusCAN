@@ -36,6 +36,7 @@ SocketCAN::SocketCAN()
     receiver_thread_id(0)
 {
     velocity = new std::queue<float>;
+    crc_checker = CRC8(0x07, 0x00, false, false, 0x00, false);
     adapter_type = ADAPTER_SOCKETCAN;
     printf("SocketCAN adapter created.\n");
 }
@@ -127,6 +128,7 @@ void SocketCAN::transmit(can_frame_t& frame)
         return;
     }
     nbytes = write(sockfd, &frame, sizeof(can_frame_t));
+    std::cout << " write : " << frame.data[0] << frame.data[1] << "\n";
     if(nbytes < 0){
         printf("Write Failed %d bytes \n", nbytes);
         return;
@@ -174,7 +176,11 @@ static void* socketcan_receiver_thread(void* argv)
                 continue;
             if (sock->reception_handler != NULL)
             {
-                sock->reception_handler(&rx_frame, sock->velocity, sock->qlock);
+                sock->reception_handler(&rx_frame);
+            }
+            else if(sock->pid_reception_handler != NULL)
+            {
+                sock->pid_reception_handler(&rx_frame, sock->velocity, sock->qlock);
             }
         }
         else
@@ -232,28 +238,23 @@ void SocketCAN::pid_control(float obj){
             qlock.unlock();
         }
         else{
-            can_frame_t* send_data;
+            can_frame_t send_data;
             float currenct_velocity = velocity->front();
             velocity->pop();
             std::cout << "pid :: " << currenct_velocity << "\n";
             qlock.unlock();
 
-
-
-
             velocity_error = obj - currenct_velocity;
-
-            
 
             // if(velocity_error >= max_rate){
             //     velocity_error = max_rate;
             // } (error값의 최댓값을 정하면 해당과 같이 코딩)
             
-            p_term = Kp * velocity_error;
-            i_term = Ki * integral;
-            d_term = Kd * (velocity_error - velocity_error_last)*0.02;
+            float p_term = Kp * velocity_error;
+            float i_term = Ki * integral;
+            float d_term = Kd * (velocity_error - velocity_error_last)*0.02;
 
-            output = p_term + i_term + d_term; // pid 계산값
+            float output = p_term + i_term + d_term; // pid 계산값
 
             // timefilter = Tf * (output - output_last)/0.02; (시간필터를 적용할것인지 추후결정)
 
@@ -266,21 +267,43 @@ void SocketCAN::pid_control(float obj){
             }else{
                 integral += (velocity_error * 0.02);
             }
-
-            make_can_frame(/*id of speed*/, output, send_data);
-
-            write(/*can0*/, send_data, sizeof(can_frame_t));
-
+            output = 0.65;
+            make_can_frame(COMMAND_ID, output, send_data);
+            transmit(send_data);
             output_last = output;
             velocity_error_last = velocity_error;
-
         }
     }
 }
 
-void SocketCAN::make_can_frame(int id, float value, can_frame_t* data){
-    data->can_id = id;
-    
+void crc(){
+
 }
+
+void SocketCAN::make_can_frame(unsigned int id_hex, float value, can_frame_t& data){
+    switch (id_hex)
+    {
+    case 0x160: {
+        float_hex_convert converter;
+        converter.val = value;
+        unsigned int send_value = htonl(converter.hex);
+        data.can_dlc = 8;
+        data.can_id = id_hex;
+        data.data[0] = DEFAULT_BUS;
+        data.data[1] = ACCEL_ID;
+        data.data[2] = NONE;
+        memcpy(data.data+3, &send_value, sizeof(unsigned int));
+        crc_8(data.data, 7, data.data+7);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void SocketCAN::crc_8(uint8_t* data, int data_length_bytes, uint8_t* crc){
+    *crc = crc_checker.calculate(data, data_length_bytes);
+}
+
 
 #endif

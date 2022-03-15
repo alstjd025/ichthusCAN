@@ -86,7 +86,7 @@ void load_dbc(std::vector<uint64_t>& id){
     }
 }
 
-void rx_ichthus_handler(can_frame_t* frame, std::queue<float>* velocity, std::mutex& qlock)
+void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<float>* velocity, std::mutex& qlock)
 {
     auto iter = messages.find(frame->can_id);
     if (iter != messages.end())
@@ -119,41 +119,46 @@ void rx_ichthus_handler(can_frame_t* frame, std::queue<float>* velocity, std::mu
 void rx_handler(can_frame_t* frame)
 {
     printf("Received bytes: Frame from 0x%0X, DLC=%d\n", frame->can_id, frame->can_dlc);
-    
-    auto iter = messages.find(frame->can_id);
-    if (iter != messages.end())
-    {
-        const dbcppp::IMessage* msg = iter->second;
-        std::cout << "Received Message: " << msg->Name() << "\n";
-        for (const dbcppp::ISignal& sig : msg->Signals())
-        {
-            const dbcppp::ISignal* mux_sig = msg->MuxSignal();
-            if (sig.MultiplexerIndicator() != dbcppp::ISignal::EMultiplexer::MuxValue ||
-                (mux_sig && mux_sig->Decode(frame->data) == sig.MultiplexerSwitchValue()))
-            {
-                std::cout << "\t" << sig.Name() << "=" << sig.RawToPhys(sig.Decode(frame->data)) << sig.Unit() << "\n";
-            }
-        }
-    }
-
     std::cout << std::flush;
-    // TODO: Do something here with the received frame
 }
 
-void open_kiacan_start_pid(){
+void pid_test(){
     float obj = 0;
     printf("\nStarts KIA CAN Reciever (can0)\n");
     printf("#############################\n");
     std::vector<uint64_t> id;
     id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
     load_dbc(id);
-    SocketCAN* adapter = new SocketCAN();
-    adapter->reception_handler = &rx_ichthus_handler;
-    adapter->open("vcan0");
-    adapter->start_receiver_thread();
+    
+    SocketCAN* KIAadapter = new SocketCAN();
+    KIAadapter->pid_reception_handler = &rx_pid_ichthus_handler;
+    KIAadapter->open("vcan0");
+    KIAadapter->start_receiver_thread();
+    
+    SocketCAN* MCMadapter = new SocketCAN();
+    MCMadapter->reception_handler = &rx_handler;
+    MCMadapter->open("vcan0");
+    MCMadapter->start_receiver_thread();
+    
+    std::cout << "==================================================" << "\n";
     std::cout << "Object Value (km/h?) : ";
     std::cin >> obj;
-    adapter->pid_control(obj);
+    KIAadapter->pid_control(obj);
+    pthread_join(KIAadapter->receiver_thread_id, NULL);
+    delete KIAadapter;
+    sleep(1.1);
+}
+
+void can_recieve_test(){
+    printf("\nStarts KIA CAN Reciever (can0)\n");
+    printf("#############################\n");
+    std::vector<uint64_t> id;
+    id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
+    load_dbc(id);
+    SocketCAN* adapter = new SocketCAN();
+    adapter->reception_handler = &rx_handler;
+    adapter->open("vcan0");
+    adapter->start_receiver_thread();
     pthread_join(adapter->receiver_thread_id, NULL);
     delete adapter;
     sleep(1.1);
@@ -179,7 +184,7 @@ void test_interface(){
         std::cout << "==================================================" << "\n";
         std::cout << "================ PID CONTROL TEST ================" << "\n";
         std::cout << "==================================================" << "\n"; 
-        open_kiacan_start_pid(); 
+        pid_test(); 
         break;
     case 1:
         std::cout << "==================================================" << "\n";
@@ -189,7 +194,8 @@ void test_interface(){
     case 2:
         std::cout << "==================================================" << "\n";
         std::cout << "================ CAN RECIEVE TEST ================" << "\n";
-        std::cout << "==================================================" << "\n"; 
+        std::cout << "==================================================" << "\n";
+        can_recieve_test(); 
         break;
     case 3:
         break;

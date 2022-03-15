@@ -6,6 +6,7 @@
 CANAdapter::CANAdapter()
     :adapter_type(ADAPTER_NONE),
      reception_handler(NULL),
+     pid_reception_handler(NULL),
      parser(NULL)
 {
     printf("CAN adapter created.\n");

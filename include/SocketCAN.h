@@ -6,12 +6,16 @@
 
 #if (!defined(SOCKETCAN_H)) && (!defined(MINGW))
 #define SOCKETCAN_H
+#include "MCMSignal.h"
+
+#include "CRC.h"
 
 #include <CANAdapter.h>
 #include <CANFrame.h>
 #include <stdbool.h>
 // IFNAMSIZ, ifreq
 #include <net/if.h>
+#include <netinet/in.h>
 // Multi-threading
 #include <pthread.h>
 #include <iostream>
@@ -42,7 +46,12 @@ class SocketCAN: public CANAdapter
     can_socket_address_t addr;
     pthread_t receiver_thread_id;
     std::queue<float>* velocity;
+    std::queue<MCM_STATE>* mcm_state;
     std::mutex qlock;
+
+    //CRC
+    CRC8 crc_checker;
+
     /**
      * CAN socket file descriptor
      */
@@ -88,7 +97,9 @@ class SocketCAN: public CANAdapter
   
     void pid_control(float obj);
 
-    void make_can_frame(int id, float value, can_frame_t* data);
+    void make_can_frame(unsigned int id_hex, float value, can_frame_t& data);
+
+    void crc_8(uint8_t* data, int data_length, uint8_t* crc);
 };
 
 #endif
