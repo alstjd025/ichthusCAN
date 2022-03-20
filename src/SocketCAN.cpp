@@ -18,6 +18,7 @@
 #include <sys/ioctl.h>
 
 /*
+00000001 00100000 00000000 01010001 01111110 00100111 00111111 00111101
  * https://github.com/JCube001/socketcan-demo
  * http://blog.mbedded.ninja/programming/operating-systems/linux/how-to-use-socketcan-with-c-in-linux
  * https://github.com/linux-can/can-utils/blob/master/candump.c
@@ -223,42 +224,34 @@ void SocketCAN::pid_control(float obj){
     float velocity_error_last = 0;
     float output_last = 0;
 
-
     float Kp = 0;
     float Ki = 0;
     float Kd = 0;
     float Tf = 0; // 시간필터
 
-
     float max_output = 0.1; // 속도 신호의 최댓값
-    float max_rate = 0; //  error 값의 최댓값 (사용할지 말지 추후 결정)
+    qlock.lock();
+    while(!velocity->empty())
+        velocity->pop();
+    qlock.unlock();
     while(true){
         qlock.lock();
-        if(velocity->empty()){ // :(
+        if(velocity->empty()){ 
             qlock.unlock();
         }
         else{
             can_frame_t send_data;
             float currenct_velocity = velocity->front();
             velocity->pop();
-            std::cout << "pid :: " << currenct_velocity << "\n";
             qlock.unlock();
 
             velocity_error = obj - currenct_velocity;
-
-            // if(velocity_error >= max_rate){
-            //     velocity_error = max_rate;
-            // } (error값의 최댓값을 정하면 해당과 같이 코딩)
             
             float p_term = Kp * velocity_error;
             float i_term = Ki * integral;
             float d_term = Kd * (velocity_error - velocity_error_last)*0.02;
 
             float output = p_term + i_term + d_term; // pid 계산값
-
-            // timefilter = Tf * (output - output_last)/0.02; (시간필터를 적용할것인지 추후결정)
-
-            // output = output _ timefilter;
 
             if(output >= max_output){
                 output = max_output;
@@ -267,7 +260,6 @@ void SocketCAN::pid_control(float obj){
             }else{
                 integral += (velocity_error * 0.02);
             }
-            output = 0.65;
             make_can_frame(COMMAND_ID, output, send_data);
             transmit(send_data);
             output_last = output;
@@ -285,15 +277,15 @@ void SocketCAN::make_can_frame(unsigned int id_hex, float value, can_frame_t& da
     {
     case 0x160: {
         float_hex_convert converter;
-        converter.val = value;
-        unsigned int send_value = htonl(converter.hex);
+        converter.hex = 0x3f277e51;
         data.can_dlc = 8;
         data.can_id = id_hex;
         data.data[0] = DEFAULT_BUS;
         data.data[1] = ACCEL_ID;
         data.data[2] = NONE;
-        memcpy(data.data+3, &send_value, sizeof(unsigned int));
+        memcpy(data.data+3, converter.data, 4);
         crc_8(data.data, 7, data.data+7);
+        printf("%x %x %x %x \n", data.data[3], data.data[4], data.data[5], data.data[6]);
         break;
     }
     default:

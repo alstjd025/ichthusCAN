@@ -138,11 +138,11 @@ void pid_test(){
     SocketCAN* MCMadapter = new SocketCAN();
     MCMadapter->reception_handler = &rx_handler;
     MCMadapter->open("vcan0");
-    MCMadapter->start_receiver_thread();
     
     std::cout << "==================================================" << "\n";
     std::cout << "Object Value (km/h?) : ";
     std::cin >> obj;
+    MCMadapter->start_receiver_thread();
     KIAadapter->pid_control(obj);
     pthread_join(KIAadapter->receiver_thread_id, NULL);
     delete KIAadapter;
