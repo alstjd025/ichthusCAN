@@ -45,9 +45,11 @@ class SocketCAN: public CANAdapter
     interface_request_t if_request;
     can_socket_address_t addr;
     pthread_t receiver_thread_id;
-    std::queue<float>* velocity;
+    std::queue<WHL_SPD>* velocity;
     std::queue<MCM_STATE>* mcm_state;
-    std::mutex qlock;
+    std::mutex KIA_Queue_lock;
+    std::mutex MCM_Queue_lock;
+    std::mutex MCM_State_lock;
 
     //CRC
     CRC8 crc_checker;

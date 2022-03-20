@@ -86,28 +86,40 @@ void load_dbc(std::vector<uint64_t>& id){
     }
 }
 
-void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<float>* velocity, std::mutex& qlock)
+void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<WHL_SPD>* velocity,\
+                                                         std::mutex& KIA_Queue_lock)
 {
     auto iter = messages.find(frame->can_id);
     if (iter != messages.end())
     {
         const dbcppp::IMessage* msg = iter->second;
-        float velocity_temp = 0;
         int counter = 0;
+        KIA_Queue_lock.lock();   
         for (const dbcppp::ISignal& sig : msg->Signals())
         {
             const dbcppp::ISignal* mux_sig = msg->MuxSignal();
             if (sig.MultiplexerIndicator() != dbcppp::ISignal::EMultiplexer::MuxValue ||
                 (mux_sig && mux_sig->Decode(frame->data) == sig.MultiplexerSwitchValue()))
             {
-                velocity_temp += sig.RawToPhys(sig.Decode(frame->data));
                 counter++;
-                if(counter == 4){
-                    qlock.lock();
-                    velocity->push(velocity_temp/4);
-                    counter = 0;
-                    velocity_temp = 0;
-                    qlock.unlock();
+                WHL_SPD data;
+                switch (counter)
+                {
+                case 1:
+                        data.FL = sig.RawToPhys(sig.Decode(frame->data));
+                    break;
+                case 2:
+                        data.FR = sig.RawToPhys(sig.Decode(frame->data));
+                    break;
+                case 3:
+                        data.RL = sig.RawToPhys(sig.Decode(frame->data));
+                    break;
+                case 4:
+                        data.RR = sig.RawToPhys(sig.Decode(frame->data));
+                        velocity->push(data);
+                        counter = 0;
+                        KIA_Queue_lock.unlock();
+                default:
                     return;
                 }
             }
@@ -122,7 +134,7 @@ void rx_handler(can_frame_t* frame)
     std::cout << std::flush;
 }
 
-void pid_test(){
+void pid_test(char* mcm, char* kia){
     float obj = 0;
     printf("\nStarts KIA CAN Reciever (can0)\n");
     printf("#############################\n");
@@ -132,17 +144,17 @@ void pid_test(){
     
     SocketCAN* KIAadapter = new SocketCAN();
     KIAadapter->pid_reception_handler = &rx_pid_ichthus_handler;
-    KIAadapter->open("vcan0");
+    KIAadapter->open(kia);
     KIAadapter->start_receiver_thread();
     
     SocketCAN* MCMadapter = new SocketCAN();
     MCMadapter->reception_handler = &rx_handler;
-    MCMadapter->open("vcan0");
+    MCMadapter->open(mcm);
+    MCMadapter->start_receiver_thread();
     
     std::cout << "==================================================" << "\n";
     std::cout << "Object Value (km/h?) : ";
     std::cin >> obj;
-    MCMadapter->start_receiver_thread();
     KIAadapter->pid_control(obj);
     pthread_join(KIAadapter->receiver_thread_id, NULL);
     delete KIAadapter;
@@ -165,15 +177,16 @@ void can_recieve_test(){
 }
 
 
-void test_interface(){
+void test_interface(char* mcm, char* kia){
     int command = -1;
     std::cout << "==================================================" << "\n";
     std::cout << "============== STARTS TEST INTERFACE =============" << "\n";
     std::cout << "==================================================" << "\n";
-    std::cout << "= 0. PID CONTROL TEST                            =" << "\n";
-    std::cout << "= 1. MCM STATUS CHECK                            =" << "\n";
-    std::cout << "= 2. CAN RECIEVE TEST                            =" << "\n";
-    std::cout << "= 3. EXIT                                        =" << "\n";
+    std::cout << "= 0. MCM Control Status                          =" << "\n";
+    std::cout << "= 1. PID CONTROL TEST                            =" << "\n";
+    std::cout << "= 2.                                             =" << "\n";
+    std::cout << "= 3. CAN RECIEVE TEST                            =" << "\n";
+    std::cout << "= 4. EXIT                                        =" << "\n";
     std::cout << "==================================================" << "\n";
     std::cout << "==================================================" << "\n";
     std::cout << ":";
@@ -182,24 +195,32 @@ void test_interface(){
     {
     case 0:
         std::cout << "==================================================" << "\n";
+        std::cout << "=============== MCM Control Status ==============" << "\n";
+        std::cout << "==================================================" << "\n";
+        std::cout << "= 1. PID CONTROL TEST                            =" << "\n";
+        std::cout << "= 2. MCM STATUS CHECK                            =" << "\n";
+        std::cout << "= 3. CAN RECIEVE TEST                            =" << "\n";
+        std::cout << "= 4. EXIT                                        =" << "\n";
+        std::cout << "==================================================" << "\n";
+        std::cout << "==================================================" << "\n";
+    case 1:
+        std::cout << "==================================================" << "\n";
         std::cout << "================ PID CONTROL TEST ================" << "\n";
         std::cout << "==================================================" << "\n"; 
-        pid_test(); 
+        pid_test(mcm, kia); 
         break;
-    case 1:
+    case 2:
         std::cout << "==================================================" << "\n";
         std::cout << "================ MCM STATUS CHECK ================" << "\n";
         std::cout << "==================================================" << "\n";  
         break;
-    case 2:
+    case 3:
         std::cout << "==================================================" << "\n";
         std::cout << "================ CAN RECIEVE TEST ================" << "\n";
         std::cout << "==================================================" << "\n";
         can_recieve_test(); 
         break;
-    case 3:
-        break;
-    case -1:
+    case 4:
         std::cout << "QUIT TEST \n";
         exit(0);
 
@@ -212,7 +233,7 @@ void test_interface(){
 
 int main(int argc, char* argv[])
 {
-    test_interface();
+    test_interface(argv[1], argv[2]);
     return 0;
 }
 
