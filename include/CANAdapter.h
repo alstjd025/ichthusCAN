@@ -28,7 +28,10 @@ typedef enum
 /**
  * How a frame reception handler should look like
  */
-typedef void (*pid_reception_handler_t)(can_frame_t*, std::queue<WHL_SPD>* velocity, std::mutex& qlock);
+typedef void (*pid_reception_handler_t)(can_frame_t*,\
+               std::queue<CanMessage::WHL_SPD>* velocity, std::mutex& KIA_Queue_lock);
+typedef void (*mcm_reception_handler_t)(can_frame_t*,\
+               std::queue<CanMessage::MCM_DATA>* MCM_Data, std::mutex& MCM_Queue_Lock);
 typedef void (*reception_handler_t)(can_frame_t*);
 
 /**
@@ -45,6 +48,7 @@ class CANAdapter
      * when frames are being received from the CAN bus
      */
     pid_reception_handler_t pid_reception_handler;
+    mcm_reception_handler_t mcm_reception_handler;
     reception_handler_t reception_handler;
     /**
      * Pointer to a CAN frame parser object

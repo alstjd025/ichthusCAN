@@ -6,7 +6,6 @@
 
 #if (!defined(SOCKETCAN_H)) && (!defined(MINGW))
 #define SOCKETCAN_H
-#include "MCMSignal.h"
 
 #include "CRC.h"
 
@@ -45,11 +44,23 @@ class SocketCAN: public CANAdapter
     interface_request_t if_request;
     can_socket_address_t addr;
     pthread_t receiver_thread_id;
-    std::queue<WHL_SPD>* velocity;
-    std::queue<MCM_STATE>* mcm_state;
+    
+    //nullptr when MCM sock
+    std::queue<CanMessage::WHL_SPD>* velocity;
+    
+    //nullptr when KIACAN sock
+    std::queue<CanMessage::MCM_DATA>* mcm_data;
+    
     std::mutex KIA_Queue_lock;
     std::mutex MCM_Queue_lock;
     std::mutex MCM_State_lock;
+
+    //TYPE (ex. MCM)
+    DeviceType devicetype;
+
+    //MCM Status struct
+    //Only SockType::MCM can own this
+    CanMessage::MCM_STATE MCM_State;
 
     //CRC
     CRC8 crc_checker;
@@ -66,6 +77,7 @@ class SocketCAN: public CANAdapter
 
     /** Constructor */
     SocketCAN();
+    SocketCAN(DeviceType type);
     /** Destructor */
     ~SocketCAN();
 

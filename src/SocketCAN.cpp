@@ -31,17 +31,41 @@
 */
 
 
-SocketCAN::SocketCAN()
+// Constructer For SocketCAN
+// 
+SocketCAN::SocketCAN(DeviceType type)
   :CANAdapter(),
   sockfd(-1),
   receiver_thread_id(0)
 {
-  velocity = new std::queue<WHL_SPD>;
-  crc_checker = CRC8(0x07, 0x00, false, false, 0x00, false);
-  adapter_type = ADAPTER_SOCKETCAN;
-  printf("SocketCAN adapter created.\n");
+  if(type == DeviceType::KIACAN){
+    velocity = new std::queue<CanMessage::WHL_SPD>;
+    mcm_data = nullptr;
+    crc_checker = CRC8(0x07, 0x00, false, false, 0x00, false);
+    adapter_type = ADAPTER_SOCKETCAN;
+    devicetype = type;
+    printf("KIACAN adapter created.\n");
+  }
+  else if(type == DeviceType::MCM){
+    velocity = nullptr;
+    mcm_data = new std::queue<CanMessage::MCM_DATA>;
+    crc_checker = CRC8(0x07, 0x00, false, false, 0x00, false);
+    adapter_type = ADAPTER_SOCKETCAN;
+    devicetype = type;
+    printf("MCM adapter created.\n");
+  }
 }
 
+//  Not Implemented
+SocketCAN::SocketCAN()
+{
+  velocity = nullptr;
+  mcm_data = new std::queue<CanMessage::MCM_DATA>;
+  crc_checker = CRC8(0x07, 0x00, false, false, 0x00, false);
+  adapter_type = ADAPTER_SOCKETCAN;
+  devicetype = DeviceType::DEFAULT;
+  printf("Default adapter created.\n");
+}
 
 SocketCAN::~SocketCAN()
 {

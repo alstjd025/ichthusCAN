@@ -86,7 +86,7 @@ void load_dbc(std::vector<uint64_t>& id){
     }
 }
 
-void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<WHL_SPD>* velocity,\
+void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<CanMessage::WHL_SPD>* velocity,\
                                                          std::mutex& KIA_Queue_lock)
 {
     auto iter = messages.find(frame->can_id);
@@ -102,7 +102,7 @@ void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<WHL_SPD>* velocity,\
                 (mux_sig && mux_sig->Decode(frame->data) == sig.MultiplexerSwitchValue()))
             {
                 counter++;
-                WHL_SPD data;
+                CanMessage::WHL_SPD data;
                 switch (counter)
                 {
                 case 1:
@@ -125,7 +125,34 @@ void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<WHL_SPD>* velocity,\
             }
         }
     }
+}
 
+void rx_mcm_ichthus_handler(can_frame_t* Frame, std::queue<CanMessage::MCM_DATA>* MCM_Data,\
+                                                         std::mutex& MCM_Queue_Lock)
+{
+    auto iter = messages.find(Frame->can_id);
+    if (iter != messages.end())
+    {
+        const dbcppp::IMessage* msg = iter->second;
+        int counter = 0;
+        MCM_Queue_Lock.lock();   
+        for (const dbcppp::ISignal& sig : msg->Signals())
+        {
+            const dbcppp::ISignal* mux_sig = msg->MuxSignal();
+            if (sig.MultiplexerIndicator() != dbcppp::ISignal::EMultiplexer::MuxValue ||
+                (mux_sig && mux_sig->Decode(Frame->data) == sig.MultiplexerSwitchValue()))
+            {
+                counter++;
+                CanMessage::WHL_SPD data;
+                switch (counter)
+                {
+                case 1:
+                default:
+                    return;
+                }
+            }
+        }
+    }
 }
 
 void rx_handler(can_frame_t* frame)
@@ -135,20 +162,24 @@ void rx_handler(can_frame_t* frame)
 }
 
 void pid_test(char* mcm, char* kia){
+    if(mcm == NULL || kia == NULL){
+        std::cout << "CAN Argument Error \n";
+        exit(-1);
+    }
     float obj = 0;
-    printf("\nStarts KIA CAN Reciever (can0)\n");
+    printf("\n Starts PID Control Test \n");
     printf("#############################\n");
     std::vector<uint64_t> id;
     id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
     load_dbc(id);
     
-    SocketCAN* KIAadapter = new SocketCAN();
+    SocketCAN* KIAadapter = new SocketCAN(DeviceType::KIACAN);
     KIAadapter->pid_reception_handler = &rx_pid_ichthus_handler;
     KIAadapter->open(kia);
     KIAadapter->start_receiver_thread();
     
-    SocketCAN* MCMadapter = new SocketCAN();
-    MCMadapter->reception_handler = &rx_handler;
+    SocketCAN* MCMadapter = new SocketCAN(DeviceType::MCM);
+    MCMadapter->mcm_reception_handler = &rx_mcm_ichthus_handler;
     MCMadapter->open(mcm);
     MCMadapter->start_receiver_thread();
     
@@ -176,6 +207,10 @@ void can_recieve_test(){
     sleep(1.1);
 }
 
+void Clear()
+{
+    std::cout << "\x1B[2J\x1B[H";
+}
 
 void test_interface(char* mcm, char* kia){
     int command = -1;
@@ -184,20 +219,21 @@ void test_interface(char* mcm, char* kia){
     std::cout << "==================================================" << "\n";
     std::cout << "= 0. MCM Control Status                          =" << "\n";
     std::cout << "= 1. PID CONTROL TEST                            =" << "\n";
-    std::cout << "= 2.                                             =" << "\n";
-    std::cout << "= 3. CAN RECIEVE TEST                            =" << "\n";
+    std::cout << "= 2. CAN RECIEVE TEST                            =" << "\n";
+    std::cout << "= 3. HELP                                        =" << "\n";
     std::cout << "= 4. EXIT                                        =" << "\n";
     std::cout << "==================================================" << "\n";
     std::cout << "==================================================" << "\n";
     std::cout << ":";
     std::cin >> command;
+    Clear();
     switch (command)
     {
     case 0:
         std::cout << "==================================================" << "\n";
         std::cout << "=============== MCM Control Status ==============" << "\n";
         std::cout << "==================================================" << "\n";
-        std::cout << "= 1. PID CONTROL TEST                            =" << "\n";
+        std::cout << "= 1.                                             =" << "\n";
         std::cout << "= 2. MCM STATUS CHECK                            =" << "\n";
         std::cout << "= 3. CAN RECIEVE TEST                            =" << "\n";
         std::cout << "= 4. EXIT                                        =" << "\n";
@@ -216,12 +252,20 @@ void test_interface(char* mcm, char* kia){
         break;
     case 3:
         std::cout << "==================================================" << "\n";
+        std::cout << "======================= HELP =====================" << "\n";
+        std::cout << "==================================================" << "\n";  
+        std::cout << "= 1.                                             =" << "\n";
+        std::cout << "= 2. MCM STATUS CHECK                            =" << "\n";
+        std::cout << "= 3. CAN RECIEVE TEST                            =" << "\n";
+        std::cout << "= 4. EXIT                                        =" << "\n";
+        std::cout << "==================================================" << "\n";
+        std::cout << "==================================================" << "\n";
+        break;
+    case 4:
+        std::cout << "==================================================" << "\n";
         std::cout << "================ CAN RECIEVE TEST ================" << "\n";
         std::cout << "==================================================" << "\n";
         can_recieve_test(); 
-        break;
-    case 4:
-        std::cout << "QUIT TEST \n";
         exit(0);
 
     default:

@@ -8,9 +8,7 @@ CANAdapter::CANAdapter()
      reception_handler(NULL),
      pid_reception_handler(NULL),
      parser(NULL)
-{
-    printf("CAN adapter created.\n");
-}
+{}
 
 
 CANAdapter::~CANAdapter()
