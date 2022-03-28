@@ -75,6 +75,25 @@ class SocketCAN: public CANAdapter
      */
     bool terminate_receiver_thread = false;
 
+    /*
+     *  Using Class value maintain Last update values
+     */
+    float velocity_error_last = 0;
+    float output_last = 0;
+
+
+    /*
+     *  Class Values for using
+     */
+
+    float thr_Kp = 0;
+    float thr_Ki = 0;
+    float thr_Kd = 0;
+
+    float br_Kp = 0;
+    float br_Ki = 0;
+    float br_Kd = 0;
+
     /** Constructor */
     SocketCAN();
     SocketCAN(DeviceType type);
@@ -111,9 +130,12 @@ class SocketCAN: public CANAdapter
     bool mcm_state_update();
 
 
+    /*
+     *  PID_Controller functions
+     */
     void decision_throttle(float obj);
-    void thorttle_pid_control(float obj);
-    void brake_pid_control(float obj);
+    void throttle_pid_control(float err);
+    void brake_pid_control(float err);
 
     void send_control_request(uint8_t interface, bool enable);
 

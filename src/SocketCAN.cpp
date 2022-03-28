@@ -245,62 +245,78 @@ void SocketCAN::start_receiver_thread()
   // Can only transmitt can_frame after this wait
   
 }
+void SocketCAN::decision_throttle(float obj){
 
+    float currenct_velocity = 0;
+    currenct_velocity = velocity->front().FL; //Front Left
+    currenct_velocity = velocity->front().FR; //Front Right
+    currenct_velocity = velocity->front().RL; //Rear Left
+    currenct_velocity = velocity->front().RR; //Rear Right
+    currenct_velocity /= 4;
+    velocity->pop();
+    KIA_Queue_lock.unlock();
 
-void SocketCAN::pid_control(float obj){
+}
+
+void SocketCAN::throttle_pid_control(float err){
   float velocity_error;
   float integral = 0;
-  float velocity_error_last = 0;
-  float output_last = 0;
 
-  float Kp = 0;
-  float Ki = 0;
-  float Kd = 0;
-  float Tf = 0; // 시간필터
+
 
   float max_output = 0.1; // 속도 신호의 최댓값
-  KIA_Queue_lock.lock();
-  while(!velocity->empty())
-    velocity->pop();
-  KIA_Queue_lock.unlock();
-  while(true){
-    KIA_Queue_lock.lock();
-    if(velocity->empty()){ 
-      KIA_Queue_lock.unlock();
-    }
-    else{
-      can_frame_t send_data;
-      float currenct_velocity = 0;
-      currenct_velocity = velocity->front().FL; //Front Left
-      currenct_velocity = velocity->front().FR; //Front Right
-      currenct_velocity = velocity->front().RL; //Rear Left
-      currenct_velocity = velocity->front().RR; //Rear Right
-      currenct_velocity /= 4;
-      velocity->pop();
-      KIA_Queue_lock.unlock();
-      velocity_error = obj - currenct_velocity;
-      
-      float p_term = Kp * velocity_error;
-      float i_term = Ki * integral;
-      float d_term = Kd * (velocity_error - velocity_error_last)*0.02;
+  can_frame_t send_data;
+  velocity_error = obj - currenct_velocity;
+  
+  float p_term = thr_Kp * velocity_error;
+  float i_term = thr_Ki * integral;
+  float d_term = thr_Kd * (velocity_error - velocity_error_last);
 
-      float output = p_term + i_term + d_term; // pid 계산값
+  float output = p_term + i_term + d_term; // pid 계산값
 
-      if(output >= max_output){
-          output = max_output;
-      }else if( output <= -max_output){
-          output = 0;
-      }else{
-          integral += (velocity_error * 0.02);
-      }
-      float_hex_convert temp;
-      temp.val = output;
-      make_can_frame(COMMAND_ID, temp, send_data);
-      transmit(send_data);
-      output_last = output;
-      velocity_error_last = velocity_error;
-    }
+  if(output >= max_output){
+      output = max_output;
+  }else if( output <= -max_output){
+      output = 0;
+  }else{
+      integral += (velocity_error);
   }
+
+  float_hex_convert temp;
+  temp.val = output;
+  make_can_frame(COMMAND_ID, temp, send_data);
+  transmit(send_data);
+  output_last = output;
+  velocity_error_last = velocity_error;
+    
+  
+}
+
+void SocketCAN::brake_pid_control(float err){
+  float velocity_error;
+  float integral = 0;
+
+  float max_output = 0.1; // 속도 신호의 최댓값
+
+  can_frame_t send_data;
+  
+  float p_term = br_Kp * velocity_error;
+  float i_term = br_Ki * integral;
+  float d_term = br_Kd * (velocity_error - velocity_error_last);
+
+  float output = p_term + i_term + d_term; // pid 계산값
+
+  if(output >= max_output){
+      output = max_output;
+  }else if( output <= -max_output){
+      output = 0;
+  }else{
+      integral += (velocity_error);
+  }
+
+  output_last = output;
+  velocity_error_last = velocity_error;
+
 }
 
 bool SocketCAN::mcm_state_update(){
