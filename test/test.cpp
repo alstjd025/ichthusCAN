@@ -90,7 +90,6 @@ void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<CanMessage::WHL_SPD>*
                                                          std::mutex& KIA_Queue_lock)
 {
     auto iter = messages.find(frame->can_id);
-    std::cout << "recet kia \n";
     if (iter != messages.end())
     {
         const dbcppp::IMessage* msg = iter->second;
@@ -132,7 +131,6 @@ void rx_mcm_ichthus_handler(can_frame_t* Frame, std::queue<CanMessage::MCM_DATA>
                                                          std::mutex& MCM_Queue_Lock)
 {
     CanMessage::MCM_DATA data_;
-    std::cout << "recet mcm \n";
     switch (Frame->can_id)
     {
     case 0x061: //Control Enable Response From MCM
@@ -233,9 +231,9 @@ void can_recieve_test(){
         printf("#############################\n");
         std::vector<uint64_t> id;
         id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
-        load_dbc(id);
-        SocketCAN* adapter = new SocketCAN();
-        adapter->reception_handler = &rx_handler;
+        load_dbc(id);   
+        SocketCAN* adapter = new SocketCAN(DeviceType::KIACAN);
+        adapter->pid_reception_handler = &rx_pid_ichthus_handler;
         adapter->open(sock);
         adapter->start_receiver_thread();
         pthread_join(adapter->receiver_thread_id, NULL);
