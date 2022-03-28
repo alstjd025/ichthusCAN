@@ -45,13 +45,17 @@
 //
 */
 
-
-
 std::unique_ptr<dbcppp::INetwork> net;
 std::unordered_map<uint64_t, const dbcppp::IMessage*> messages;
 
 //  DBC LOADER FUNCTION
 //  ADD All Messages in DBC file to parser object
+
+void Clear()
+{
+    std::cout << "\x1B[2J\x1B[H";
+}
+
 void load_dbc(){
     std::cout << "Loading DBC \n";
 
@@ -163,6 +167,7 @@ void pid_test(char* mcm, char* kia){
     }
     float obj = 0;
     printf("\n Starts PID Control Test \n");
+    printf("Create MCM Adapter with [%s] KIA Adapter with [%s] \n", mcm, kia);
     printf("#############################\n");
     std::vector<uint64_t> id;
     id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
@@ -180,15 +185,19 @@ void pid_test(char* mcm, char* kia){
     sleep(3);
     
     std::cout << "==================================================" << "\n";
-    std::cout << "Sending Control Request\n";
     MCMadapter->send_control_request(BRAKE_ID, true);
     MCMadapter->send_control_request(ACCEL_ID, true);
     MCMadapter->send_control_request(STEER_ID, true);
-    sleep(10);
+    std::cout << "Send Control Request, Waiting for Response (15s)\n";
+    sleep(15);
     if(MCMadapter->mcm_state_update() != true){
         std::cout << "Control Enable Failed \n";
         exit(-1);
     }
+    sleep(5);
+    Clear();
+    std::cout << "==================================================" << "\n";
+    std::cout << "Control Enabled \n";
     std::cout << "==================================================" << "\n";
     std::cout << "Object Value (km/h?) : ";
     std::cin >> obj;
@@ -248,15 +257,11 @@ void can_recieve_test(){
     }
 }
 
-void Clear()
-{
-    std::cout << "\x1B[2J\x1B[H";
-}
 
 void test_interface(char* mcm, char* kia){
     int command = -1;
     std::cout << "==================================================" << "\n";
-    std::cout << "============== STARTS TEST INTERFACE =============" << "\n";
+    std::cout << "============= ICHTHUS ACTUATION TEST =============" << "\n";
     std::cout << "==================================================" << "\n";
     std::cout << "= 0. MCM Control Status                          =" << "\n";
     std::cout << "= 1. PID CONTROL TEST                            =" << "\n";

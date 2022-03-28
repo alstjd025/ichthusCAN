@@ -153,12 +153,11 @@ void SocketCAN::transmit(can_frame_t& frame)
     return;
   }
   nbytes = write(sockfd, &frame, sizeof(can_frame_t));
-  std::cout << " write : " << frame.data[0] << frame.data[1] << "\n";
   if(nbytes < 0){
     printf("Write Failed %d bytes \n", nbytes);
     return;
   }
-  printf("Write succeed %d bytes\n", nbytes);
+  return;
 }
 
 
@@ -305,7 +304,6 @@ bool SocketCAN::mcm_state_update(){
     mcm_data->pop();
     MCM_Queue_lock.unlock();
     if(data.type == MCM_MESSAGE_TYPE::CONTROL_RESPONSE){
-      std::cout << "got control response msg \n";
       switch (data.int_id)
       {
       case BRAKE_ID:
