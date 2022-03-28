@@ -111,7 +111,9 @@ class SocketCAN: public CANAdapter
     bool mcm_state_update();
 
 
-    void pid_control(float obj);
+    void decision_throttle(float obj);
+    void thorttle_pid_control(float obj);
+    void brake_pid_control(float obj);
 
     void send_control_request(uint8_t interface, bool enable);
 
