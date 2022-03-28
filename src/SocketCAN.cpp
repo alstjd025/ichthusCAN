@@ -205,7 +205,10 @@ static void* socketcan_receiver_thread(void* argv)
       }
       else if(sock->pid_reception_handler != NULL)
       {
-        sock->pid_reception_handler(&rx_frame, sock->velocity, sock->KIA_Queue_lock);
+        if(sock->devicetype == DeviceType::KIACAN)
+          sock->pid_reception_handler(&rx_frame, sock->velocity, sock->KIA_Queue_lock);
+        else if(sock->devicetype == DeviceType::MCM)
+          sock->mcm_reception_handler(&rx_frame, sock->mcm_data, sock->MCM_Queue_lock);
       }
     }
     else
@@ -220,6 +223,7 @@ static void* socketcan_receiver_thread(void* argv)
   // Thread terminates
   return NULL;
 }
+
 
 
 void SocketCAN::start_receiver_thread()
@@ -241,6 +245,7 @@ void SocketCAN::start_receiver_thread()
   // Can only transmitt can_frame after this wait
   
 }
+
 
 void SocketCAN::pid_control(float obj){
   float velocity_error;
@@ -288,7 +293,9 @@ void SocketCAN::pid_control(float obj){
       }else{
           integral += (velocity_error * 0.02);
       }
-      make_can_frame(COMMAND_ID, output, send_data);
+      float_hex_convert temp;
+      temp.val = output;
+      make_can_frame(COMMAND_ID, temp, send_data);
       transmit(send_data);
       output_last = output;
       velocity_error_last = velocity_error;
@@ -296,30 +303,87 @@ void SocketCAN::pid_control(float obj){
   }
 }
 
-void crc(){
-
+bool SocketCAN::mcm_state_update(){
+  MCM_Queue_lock.lock();
+  while(!mcm_data->empty()){
+    CanMessage::MCM_DATA data = mcm_data->front();
+    mcm_data->pop();
+    MCM_Queue_lock.unlock();
+    if(data.type == MCM_MESSAGE_TYPE::CONTROL_RESPONSE){
+      std::cout << "got control response msg \n";
+      switch (data.int_id)
+      {
+      case BRAKE_ID:
+        if(MCM_State.Brake_Control_State != data.bool_data){
+          MCM_State.Brake_Control_State = data.bool_data;
+          std::cout << "MCM [BRAKE] Control state have changed to " << MCM_State.Brake_Control_State\
+                    << " \n";
+        }
+        break;
+      case ACCEL_ID:
+        if(MCM_State.Accel_Control_State != data.bool_data){
+          MCM_State.Accel_Control_State = data.bool_data;
+          std::cout << "MCM [ACCEL] Control state have changed to " << MCM_State.Accel_Control_State\
+                    << " \n";
+        }
+        break;
+      case STEER_ID:
+        if(MCM_State.Steer_Control_State != data.bool_data){
+          MCM_State.Steer_Control_State = data.bool_data;
+          std::cout << "MCM [STEER] Control state have changed to " << MCM_State.Steer_Control_State\
+                    << " \n";
+        }
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  if(MCM_State.Brake_Control_State == 1 && MCM_State.Accel_Control_State == 1 &&\
+      MCM_State.Steer_Control_State == 1){
+        return true;
+      }
+  return false;
 }
 
-void SocketCAN::make_can_frame(unsigned int id_hex, float value, can_frame_t& data){
-  switch (id_hex)
-  {
+void SocketCAN::send_control_request(uint8_t interface, bool enable){
+  can_frame_t send_data;
+  make_can_frame(CONTROL_ID, interface, enable, send_data);
+  transmit(send_data);
+}
+
+void SocketCAN::make_can_frame(unsigned int id_hex, uint8_t interface_id, bool value\
+                                                                 ,can_frame_t& data){
+  float_hex_convert converter;
+  memset(converter.data, 0, 4); 
+  converter.data[0] = interface_id;
+  converter.data[1] = value;
+  make_can_frame(id_hex, converter, data);
+}
+
+void SocketCAN::make_can_frame(unsigned int id_hex, float_hex_convert converter\
+                                                            , can_frame_t& data){
+  switch (id_hex){
   //Accel Command
   case 0x160: {
-    float_hex_convert converter;
-    converter.val = value;
     data.can_dlc = 8;
     data.can_id = id_hex;
     data.data[0] = DEFAULT_BUS;
     data.data[1] = ACCEL_ID;
     data.data[2] = NONE;
     memcpy(data.data+3, converter.data, 4);
-    crc_8(data.data, 7, data.data+7);
-    printf("%x %x %x %x \n", data.data[3], data.data[4], data.data[5], data.data[6]);
+    break;
+  }
+  case 0x60: {
+    data.can_dlc = 8;
+    data.can_id = id_hex;
+    memcpy(data.data+3, converter.data, 4);
     break;
   }
   default:
     break;
   }
+  crc_8(data.data, 7, data.data+7);
 }
 
 void SocketCAN::crc_8(uint8_t* data, int data_length_bytes, uint8_t* crc){

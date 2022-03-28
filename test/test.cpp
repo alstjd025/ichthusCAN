@@ -90,6 +90,7 @@ void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<CanMessage::WHL_SPD>*
                                                          std::mutex& KIA_Queue_lock)
 {
     auto iter = messages.find(frame->can_id);
+    std::cout << "recet kia \n";
     if (iter != messages.end())
     {
         const dbcppp::IMessage* msg = iter->second;
@@ -130,28 +131,24 @@ void rx_pid_ichthus_handler(can_frame_t* frame, std::queue<CanMessage::WHL_SPD>*
 void rx_mcm_ichthus_handler(can_frame_t* Frame, std::queue<CanMessage::MCM_DATA>* MCM_Data,\
                                                          std::mutex& MCM_Queue_Lock)
 {
-    auto iter = messages.find(Frame->can_id);
-    if (iter != messages.end())
+    CanMessage::MCM_DATA data_;
+    std::cout << "recet mcm \n";
+    switch (Frame->can_id)
     {
-        const dbcppp::IMessage* msg = iter->second;
-        int counter = 0;
-        MCM_Queue_Lock.lock();   
-        for (const dbcppp::ISignal& sig : msg->Signals())
-        {
-            const dbcppp::ISignal* mux_sig = msg->MuxSignal();
-            if (sig.MultiplexerIndicator() != dbcppp::ISignal::EMultiplexer::MuxValue ||
-                (mux_sig && mux_sig->Decode(Frame->data) == sig.MultiplexerSwitchValue()))
-            {
-                counter++;
-                CanMessage::WHL_SPD data;
-                switch (counter)
-                {
-                case 1:
-                default:
-                    return;
-                }
-            }
-        }
+    case 0x061: //Control Enable Response From MCM
+
+        data_.int_id = Frame->data[1];
+        data_.bool_data = Frame->data[2];
+        data_.type = MCM_MESSAGE_TYPE::CONTROL_RESPONSE;
+        MCM_Queue_Lock.lock();
+        MCM_Data->push(data_);
+        MCM_Queue_Lock.unlock();
+        break;
+    case 0x161:
+        
+        break;
+    default:
+        break;
     }
 }
 
@@ -183,6 +180,16 @@ void pid_test(char* mcm, char* kia){
     MCMadapter->open(mcm);
     MCMadapter->start_receiver_thread();
     
+    std::cout << "==================================================" << "\n";
+    std::cout << "Sending Control Request\n";
+    MCMadapter->send_control_request(BRAKE_ID, true);
+    MCMadapter->send_control_request(ACCEL_ID, true);
+    MCMadapter->send_control_request(STEER_ID, true);
+    sleep(10);
+    if(MCMadapter->mcm_state_update() != true){
+        std::cout << "Control Enable Failed \n";
+        exit(-1);
+    }
     std::cout << "==================================================" << "\n";
     std::cout << "Object Value (km/h?) : ";
     std::cin >> obj;
@@ -233,12 +240,11 @@ void test_interface(char* mcm, char* kia){
         std::cout << "==================================================" << "\n";
         std::cout << "=============== MCM Control Status ==============" << "\n";
         std::cout << "==================================================" << "\n";
-        std::cout << "= 1.                                             =" << "\n";
-        std::cout << "= 2. MCM STATUS CHECK                            =" << "\n";
-        std::cout << "= 3. CAN RECIEVE TEST                            =" << "\n";
-        std::cout << "= 4. EXIT                                        =" << "\n";
         std::cout << "==================================================" << "\n";
         std::cout << "==================================================" << "\n";
+        std::cout << "==================================================" << "\n";
+        std::cout << "Not Implemented \n";
+        break;
     case 1:
         std::cout << "==================================================" << "\n";
         std::cout << "================ PID CONTROL TEST ================" << "\n";

@@ -60,7 +60,7 @@ class SocketCAN: public CANAdapter
 
     //MCM Status struct
     //Only SockType::MCM can own this
-    CanMessage::MCM_STATE MCM_State;
+    MCM_STATE MCM_State;
 
     //CRC
     CRC8 crc_checker;
@@ -108,10 +108,15 @@ class SocketCAN: public CANAdapter
      * Starts a new thread, that will wait for socket events
      */
     void start_receiver_thread();
-  
+    bool mcm_state_update();
+
+
     void pid_control(float obj);
 
-    void make_can_frame(unsigned int id_hex, float value, can_frame_t& data);
+    void send_control_request(uint8_t interface, bool enable);
+
+    void make_can_frame(unsigned int id_hex, float_hex_convert converter, can_frame_t& data);
+    void make_can_frame(unsigned int id_hex, uint8_t interface_id, bool value, can_frame_t& data);
 
     void crc_8(uint8_t* data, int data_length, uint8_t* crc);
 };
