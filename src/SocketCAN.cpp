@@ -164,18 +164,22 @@ void SocketCAN::transmit(can_frame_t& frame)
 
 static void* socketcan_receiver_thread(void* argv)
 {
+  
   /*
     * The first and only argument to this function
     * is the pointer to the object, which started the thread.
     */
   SocketCAN* sock = (SocketCAN*) argv;
-
+  if(sock->devicetype == DeviceType::MCM)
+    std::cout << "Starts MCM receiver thread \n";
   // Holds the set of descriptors, that 'select' shall monitor
   fd_set descriptors;
 
   // Highest file descriptor in set
   int maxfd = sock->sockfd;
 
+  if(sock->devicetype == DeviceType::MCM)
+    std::cout << "MCM receiver thread file descriptor "<< maxfd <<" \n";
   // How long 'select' shall wait before returning with timeout
   struct timeval timeout;
 
@@ -205,10 +209,14 @@ static void* socketcan_receiver_thread(void* argv)
       }
       else if(sock->pid_reception_handler != NULL)
       {
-        if(sock->devicetype == DeviceType::KIACAN)
+        if(sock->devicetype == DeviceType::KIACAN){
+          std::cout << "Recieved KIA \n";
           sock->pid_reception_handler(&rx_frame, sock->velocity, sock->KIA_Queue_lock);
-        else if(sock->devicetype == DeviceType::MCM)
+        }
+        else if(sock->devicetype == DeviceType::MCM){
+          std::cout << "Recieved MCM \n";
           sock->mcm_reception_handler(&rx_frame, sock->mcm_data, sock->MCM_Queue_lock);
+        }
       }
     }
     else

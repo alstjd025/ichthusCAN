@@ -179,6 +179,7 @@ void pid_test(char* mcm, char* kia){
     MCMadapter->mcm_reception_handler = &rx_mcm_ichthus_handler;
     MCMadapter->open(mcm);
     MCMadapter->start_receiver_thread();
+    sleep(3);
     
     std::cout << "==================================================" << "\n";
     std::cout << "Sending Control Request\n";
@@ -195,23 +196,58 @@ void pid_test(char* mcm, char* kia){
     std::cin >> obj;
     KIAadapter->pid_control(obj);
     pthread_join(KIAadapter->receiver_thread_id, NULL);
+    pthread_join(MCMadapter->receiver_thread_id, NULL);
     delete KIAadapter;
+    delete MCMadapter;
     sleep(1.1);
 }
 
 void can_recieve_test(){
-    printf("\nStarts KIA CAN Reciever (can0)\n");
-    printf("#############################\n");
-    std::vector<uint64_t> id;
-    id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
-    load_dbc(id);
-    SocketCAN* adapter = new SocketCAN();
-    adapter->reception_handler = &rx_handler;
-    adapter->open("vcan0");
-    adapter->start_receiver_thread();
-    pthread_join(adapter->receiver_thread_id, NULL);
-    delete adapter;
-    sleep(1.1);
+    std::cout << "==================================================" << "\n";
+    std::cout << "CAN Recieve Test \n";
+    std::cout << "Select CAN Interface for test\n";
+    std::cout << "MCM 1 \n";
+    std::cout << "KIA 2 \n";
+    int choice = 0;
+    char sock[5];
+    std::cin >> choice;
+    std::cout << "Socket Interface name : ";
+    std::cin >> sock;
+    switch (choice)
+    {
+    case 1:{
+        printf("\nStarts MCM CAN Reciever %s \n", sock);
+        printf("#############################\n");
+        std::vector<uint64_t> id;
+        SocketCAN* adapter = new SocketCAN(DeviceType::MCM);
+        adapter->mcm_reception_handler = &rx_mcm_ichthus_handler;
+        adapter->open(sock);
+        adapter->start_receiver_thread();
+        pthread_join(adapter->receiver_thread_id, NULL);
+        delete adapter;
+        sleep(1.1);
+        break;
+    }
+    case 2:{
+        printf("\nStarts KIA CAN Reciever %s \n", sock);
+        printf("#############################\n");
+        std::vector<uint64_t> id;
+        id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
+        load_dbc(id);
+        SocketCAN* adapter = new SocketCAN();
+        adapter->reception_handler = &rx_handler;
+        adapter->open(sock);
+        adapter->start_receiver_thread();
+        pthread_join(adapter->receiver_thread_id, NULL);
+        delete adapter;
+        sleep(1.1);
+        break;
+    }
+        break;
+    
+    default:
+        break;
+    }
 }
 
 void Clear()
@@ -252,9 +288,7 @@ void test_interface(char* mcm, char* kia){
         pid_test(mcm, kia); 
         break;
     case 2:
-        std::cout << "==================================================" << "\n";
-        std::cout << "================ MCM STATUS CHECK ================" << "\n";
-        std::cout << "==================================================" << "\n";  
+        can_recieve_test();  
         break;
     case 3:
         std::cout << "==================================================" << "\n";
