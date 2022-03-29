@@ -370,7 +370,8 @@ void SocketCAN::make_can_frame(unsigned int id_hex, float_hex_convert converter\
   case 0x60: {
     data.can_dlc = 8;
     data.can_id = id_hex;
-    memcpy(data.data+3, converter.data, 4);
+    data.data[0] = DEFAULT_BUS;
+    memcpy(data.data+1, converter.data, 4);
     break;
   }
   default:
