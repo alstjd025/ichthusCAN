@@ -52,6 +52,7 @@ SocketCAN::SocketCAN(DeviceType type)
     crc_checker = CRC8(0x07, 0x00, false, false, 0x00, false);
     adapter_type = ADAPTER_SOCKETCAN;
     devicetype = type;
+    initialize_mcm_State();
     printf("MCM adapter created.\n");
   }
 }
@@ -76,6 +77,16 @@ SocketCAN::~SocketCAN()
   }
 }
 
+void SocketCAN::initialize_mcm_State(){
+  MCM_State_lock.lock();
+  MCM_State_subsys1.Accel_Control_State = false;
+  MCM_State_subsys1.Brake_Control_State = false;
+  MCM_State_subsys1.Steer_Control_State = false;
+  MCM_State_subsys2.Accel_Control_State = false;
+  MCM_State_subsys2.Brake_Control_State = false;
+  MCM_State_subsys2.Steer_Control_State = false;
+  MCM_State_lock.unlock();
+}
 
 void SocketCAN::open(char* interface)
 {
@@ -303,37 +314,55 @@ bool SocketCAN::mcm_state_update(){
     CanMessage::MCM_DATA data = mcm_data->front();
     mcm_data->pop();
     MCM_Queue_lock.unlock();
+    MCM_State_lock.lock();
     if(data.type == MCM_MESSAGE_TYPE::CONTROL_RESPONSE){
-      switch (data.int_id)
+      switch (data.hex_id)
       {
       case BRAKE_ID:
-        if(MCM_State.Brake_Control_State != data.bool_data){
-          MCM_State.Brake_Control_State = data.bool_data;
-          std::cout << "MCM [BRAKE] Control state have changed to " << MCM_State.Brake_Control_State\
-                    << " \n";
+        if(data.subsys_id == 0){
+          if(MCM_State_subsys1.Brake_Control_State != data.bool_data)
+            MCM_State_subsys1.Brake_Control_State = data.bool_data;
         }
+        else if(data.subsys_id == 1){
+          if(MCM_State_subsys2.Brake_Control_State != data.bool_data)
+            MCM_State_subsys2.Brake_Control_State = data.bool_data;      
+        }
+        printf("MCM [BRAKE] Control state have changed to [SUBSYS1] %d [SUBSYS2] %d \n"\
+              , MCM_State_subsys1.Brake_Control_State, MCM_State_subsys2.Brake_Control_State);
         break;
       case ACCEL_ID:
-        if(MCM_State.Accel_Control_State != data.bool_data){
-          MCM_State.Accel_Control_State = data.bool_data;
-          std::cout << "MCM [ACCEL] Control state have changed to " << MCM_State.Accel_Control_State\
-                    << " \n";
+        if(data.subsys_id == 0){
+          if(MCM_State_subsys1.Accel_Control_State != data.bool_data)
+            MCM_State_subsys1.Accel_Control_State = data.bool_data;
         }
+        else if(data.subsys_id == 1){
+          if(MCM_State_subsys2.Accel_Control_State != data.bool_data)
+            MCM_State_subsys2.Accel_Control_State = data.bool_data;      
+        }
+        printf("MCM [ACEEL] Control state have changed to [SUBSYS1] %d [SUBSYS2] %d \n"\
+              , MCM_State_subsys1.Accel_Control_State, MCM_State_subsys2.Accel_Control_State);
         break;
       case STEER_ID:
-        if(MCM_State.Steer_Control_State != data.bool_data){
-          MCM_State.Steer_Control_State = data.bool_data;
-          std::cout << "MCM [STEER] Control state have changed to " << MCM_State.Steer_Control_State\
-                    << " \n";
+        if(data.subsys_id == 0){
+          if(MCM_State_subsys1.Steer_Control_State != data.bool_data)
+            MCM_State_subsys1.Steer_Control_State = data.bool_data;
         }
+        else if(data.subsys_id == 1){
+          if(MCM_State_subsys2.Steer_Control_State != data.bool_data)
+            MCM_State_subsys2.Steer_Control_State = data.bool_data;      
+        }
+        printf("MCM [Steer] Control state have changed to [SUBSYS1] %d [SUBSYS2] %d \n"\
+              , MCM_State_subsys1.Steer_Control_State, MCM_State_subsys2.Steer_Control_State);
         break;
       default:
         break;
       }
     }
+    MCM_State_lock.unlock();
   }
-  if(MCM_State.Brake_Control_State == 1 && MCM_State.Accel_Control_State == 1 &&\
-      MCM_State.Steer_Control_State == 1){
+  if(MCM_State_subsys1.Brake_Control_State == 1 && MCM_State_subsys1.Accel_Control_State == 1 &&\
+      MCM_State_subsys1.Steer_Control_State == 1 && MCM_State_subsys2.Brake_Control_State == 1 &&\
+      MCM_State_subsys2.Accel_Control_State == 1 && MCM_State_subsys2.Steer_Control_State == 1){
         return true;
       }
   return false;
@@ -367,6 +396,7 @@ void SocketCAN::make_can_frame(unsigned int id_hex, float_hex_convert converter\
     memcpy(data.data+3, converter.data, 4);
     break;
   }
+  //Control Request
   case 0x60: {
     data.can_dlc = 8;
     data.can_id = id_hex;

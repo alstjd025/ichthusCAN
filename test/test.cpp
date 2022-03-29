@@ -43,19 +43,25 @@
 // ./test <MCM CAN BUS> <KIA CAN BUS> 
 // ex) ./test can0 can1
 //
+10000001 00000000 00000001 00001000 00000000 00000000 00000000
+00000001 00000000 00000001 00001000 00000000 00000000 00000000
+
+00000001 00100000 00000001 00000000 10000110 10000111 00000000
+10000001 00100000 00000001 00000000 10000110 00000000 00000000
+
 */
 
 std::unique_ptr<dbcppp::INetwork> net;
 std::unordered_map<uint64_t, const dbcppp::IMessage*> messages;
 
-//  DBC LOADER FUNCTION
-//  ADD All Messages in DBC file to parser object
 
 void Clear()
 {
     std::cout << "\x1B[2J\x1B[H";
 }
 
+//  DBC LOADER FUNCTION
+//  ADD All Messages in DBC file to parser object
 void load_dbc(){
     std::cout << "Loading DBC \n";
 
@@ -138,8 +144,8 @@ void rx_mcm_ichthus_handler(can_frame_t* Frame, std::queue<CanMessage::MCM_DATA>
     switch (Frame->can_id)
     {
     case 0x061: //Control Enable Response From MCM
-
-        data_.int_id = Frame->data[1];
+        data_.subsys_id = (Frame->data[0] & SUBSYS_MASK) >> 7;
+        data_.hex_id = Frame->data[1];
         data_.bool_data = Frame->data[2];
         data_.type = MCM_MESSAGE_TYPE::CONTROL_RESPONSE;
         MCM_Queue_Lock.lock();
@@ -147,7 +153,6 @@ void rx_mcm_ichthus_handler(can_frame_t* Frame, std::queue<CanMessage::MCM_DATA>
         MCM_Queue_Lock.unlock();
         break;
     case 0x161:
-        
         break;
     default:
         break;
@@ -195,7 +200,6 @@ void pid_test(char* mcm, char* kia){
         exit(-1);
     }
     sleep(5);
-    Clear();
     std::cout << "==================================================" << "\n";
     std::cout << "Control Enabled \n";
     std::cout << "==================================================" << "\n";

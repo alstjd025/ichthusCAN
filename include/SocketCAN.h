@@ -23,6 +23,15 @@
 #include <mutex>
 
 
+/*
+cansend vcan1 061#10.00.01.00.00.00.00.00
+cansend vcan1 061#10.20.01.00.00.00.00.00
+cansend vcan1 061#10.40.01.00.00.00.00.00
+cansend vcan1 061#81.00.01.00.00.00.00.00
+cansend vcan1 061#81.20.01.00.00.00.00.00
+cansend vcan1 061#81.40.01.00.00.00.00.00
+*/
+
 /**
  * Interface request structure used for socket ioctl's
  */
@@ -60,7 +69,9 @@ class SocketCAN: public CANAdapter
 
     //MCM Status struct
     //Only SockType::MCM can own this
-    MCM_STATE MCM_State;
+    //We have two subsystem in MCM
+    MCM_STATE MCM_State_subsys1;
+    MCM_STATE MCM_State_subsys2;
 
     //CRC
     CRC8 crc_checker;
@@ -109,7 +120,7 @@ class SocketCAN: public CANAdapter
      */
     void start_receiver_thread();
     bool mcm_state_update();
-
+    void initialize_mcm_State();
 
     void pid_control(float obj);
 
