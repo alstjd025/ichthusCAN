@@ -94,6 +94,12 @@ class SocketCAN: public CANAdapter
     float br_Ki = 0;
     float br_Kd = 0;
 
+    float thr_output_last; 
+    float thr_velocity_error_last;
+
+    float brk_output_last; 
+    float brk_velocity_error_last;
+
     /** Constructor */
     SocketCAN();
     SocketCAN(DeviceType type);
