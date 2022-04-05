@@ -205,7 +205,9 @@ void pid_test(char* mcm, char* kia){
     std::cout << "==================================================" << "\n";
     std::cout << "Object Value (km/h?) : ";
     std::cin >> obj;
-    KIAadapter->pid_control(obj);
+    while(1){
+        KIAadapter->pid_decision(obj);
+    }
     pthread_join(KIAadapter->receiver_thread_id, NULL);
     pthread_join(MCMadapter->receiver_thread_id, NULL);
     delete KIAadapter;

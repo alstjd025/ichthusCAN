@@ -250,10 +250,11 @@ void SocketCAN::start_receiver_thread()
   // Can only transmitt can_frame after this wait
   
 }
-void SocketCAN::decision_throttle(float obj){
+void SocketCAN::pid_decision(float obj){
 
-    KIA_Queue_lock.lock();
-    float currenct_velocity = 0;
+  float currenct_velocity = 0;
+  KIA_Queue_lock.lock();
+  if(!velocity->empty()){
     currenct_velocity += velocity->front().FL; //Front Left
     currenct_velocity += velocity->front().FR; //Front Right
     currenct_velocity += velocity->front().RL; //Rear Left
@@ -269,7 +270,11 @@ void SocketCAN::decision_throttle(float obj){
     }else{
       brake_pid_control(velocity_err);
     }
-
+    return;
+  }
+  else
+    KIA_Queue_lock.unlock();  
+  return;
 }
 
 void SocketCAN::throttle_pid_control(float err){

@@ -150,7 +150,7 @@ class SocketCAN: public CANAdapter
     /*
      *  PID_Controller functions
      */
-    void decision_throttle(float obj);
+    void pid_decision(float obj);
     void throttle_pid_control(float err);
     void brake_pid_control(float err);
 
