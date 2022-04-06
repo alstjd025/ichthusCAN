@@ -301,6 +301,7 @@ void SocketCAN::throttle_pid_control(float err){
 
   float_hex_convert temp;
   temp.val = output;
+  send_data.data[1] = ACCEL_ID;
   make_can_frame(COMMAND_ID, temp, send_data);
   transmit(send_data);
   thr_output_last = output;
@@ -308,7 +309,11 @@ void SocketCAN::throttle_pid_control(float err){
     
   
 }
+/*
+다ㅁ배 주류 접ㅏㅣ 쉬ㅁ
 
+
+*/
 void SocketCAN::brake_pid_control(float err){
   float velocity_error;
   float integral = 0;
@@ -333,7 +338,11 @@ void SocketCAN::brake_pid_control(float err){
   
   
   integral += (velocity_error);
-  
+  float_hex_convert temp;
+  temp.val = output;
+  send_data.data[1] = BRAKE_ID;
+  make_can_frame(COMMAND_ID, temp, send_data);
+  transmit(send_data);
 
   brk_output_last = output;
   brk_velocity_error_last = velocity_error;
@@ -342,11 +351,11 @@ void SocketCAN::brake_pid_control(float err){
 
 bool SocketCAN::mcm_state_update(){
   MCM_Queue_lock.lock();
+  MCM_State_lock.lock();
   while(!mcm_data->empty()){
     CanMessage::MCM_DATA data = mcm_data->front();
     mcm_data->pop();
     MCM_Queue_lock.unlock();
-    MCM_State_lock.lock();
     if(data.type == MCM_MESSAGE_TYPE::CONTROL_RESPONSE){
       switch (data.hex_id)
       {
@@ -390,13 +399,15 @@ bool SocketCAN::mcm_state_update(){
         break;
       }
     }
-    MCM_State_lock.unlock();
   }
+  MCM_Queue_lock.unlock();
   if(MCM_State_subsys1.Brake_Control_State == 1 && MCM_State_subsys1.Accel_Control_State == 1 &&\
       MCM_State_subsys1.Steer_Control_State == 1 && MCM_State_subsys2.Brake_Control_State == 1 &&\
       MCM_State_subsys2.Accel_Control_State == 1 && MCM_State_subsys2.Steer_Control_State == 1){
-        return true;
-      }
+      MCM_State_lock.unlock();
+    return true;
+  }
+  MCM_State_lock.unlock();
   return false;
 }
 
@@ -423,7 +434,7 @@ void SocketCAN::make_can_frame(unsigned int id_hex, float_hex_convert converter\
     data.can_dlc = 8;
     data.can_id = id_hex;
     data.data[0] = DEFAULT_BUS;
-    data.data[1] = ACCEL_ID;
+    //data.data[1] = ACCEL_ID;
     data.data[2] = NONE;
     memcpy(data.data+3, converter.data, sizeof(float));
     break;

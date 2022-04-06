@@ -170,6 +170,8 @@ void pid_test(char* mcm, char* kia){
         std::cout << "CAN Argument Error \n";
         exit(-1);
     }
+    int temp_flag = 0;
+    char temp_char = '\0';
     float obj = 0;
     printf("\n Starts PID Control Test \n");
     printf("Create MCM Adapter with [%s] KIA Adapter with [%s] \n", mcm, kia);
@@ -190,14 +192,28 @@ void pid_test(char* mcm, char* kia){
     sleep(3);
     
     std::cout << "==================================================" << "\n";
-    MCMadapter->send_control_request(BRAKE_ID, true);
-    MCMadapter->send_control_request(ACCEL_ID, true);
-    MCMadapter->send_control_request(STEER_ID, true);
-    std::cout << "Send Control Request, Waiting for Response (15s)\n";
-    sleep(15);
-    if(MCMadapter->mcm_state_update() != true){
-        std::cout << "Control Enable Failed \n";
-        exit(-1);
+    while(temp_flag == 0){
+        MCMadapter->send_control_request(BRAKE_ID, true);
+        MCMadapter->send_control_request(ACCEL_ID, true);
+        MCMadapter->send_control_request(STEER_ID, true);
+        std::cout << "Send Control Request, Waiting for Response (10s)\n";
+        sleep(10);
+        if(MCMadapter->mcm_state_update() != true){
+            std::cout << "Control Enable Failed \n";
+            std::cout << "Try Again? [y/n] \n";
+            std::cin >> temp_char;
+            if(temp_char == 'n'){
+                std::cout << "Control Request Stopped \n";
+                exit(0);
+            }
+            else if(temp_char == 'y'){
+                temp_char = '\0';
+                temp_flag = 0;
+            }
+        }
+        else{
+            temp_flag = 1;
+        }
     }
     sleep(5);
     std::cout << "==================================================" << "\n";
