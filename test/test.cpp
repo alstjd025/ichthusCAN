@@ -171,6 +171,7 @@ void pid_test(char* mcm, char* kia){
         exit(-1);
     }
     int temp_flag = 0;
+    int temp_flag_ = 0;
     char temp_char = '\0';
     float obj = 0;
     printf("\n Starts PID Control Test \n");
@@ -192,40 +193,49 @@ void pid_test(char* mcm, char* kia){
     sleep(3);
     
     std::cout << "==================================================" << "\n";
-    while(temp_flag == 0){
-        MCMadapter->send_control_request(BRAKE_ID, true);
-        MCMadapter->send_control_request(ACCEL_ID, true);
-        MCMadapter->send_control_request(STEER_ID, true);
-        std::cout << "Send Control Request, Waiting for Response (10s)\n";
-        sleep(10);
-        if(MCMadapter->mcm_state_update() != true){
-            std::cout << "Control Enable Failed \n";
-            std::cout << "Try Again? [y/n] \n";
-            std::cin >> temp_char;
-            if(temp_char == 'n'){
-                std::cout << "Control Request Stopped \n";
-                exit(0);
+    while(temp_flag_ == 0){
+        while(temp_flag == 0){
+            MCMadapter->send_control_request(BRAKE_ID, true);
+            MCMadapter->send_control_request(ACCEL_ID, true);
+            MCMadapter->send_control_request(STEER_ID, true);
+            std::cout << "Send Control Request, Waiting for Response (10s)\n";
+            sleep(10);
+            if(MCMadapter->mcm_state_update() != true){
+                std::cout << "Control Enable Failed \n";
+                std::cout << "Try Again? [y/n] \n";
+                std::cin >> temp_char;
+                if(temp_char == 'n'){
+                    std::cout << "Control Request Stopped \n";
+                    exit(0);
+                }
+                else if(temp_char == 'y'){
+                    temp_char = '\0';
+                    temp_flag = 0;
+                }
             }
-            else if(temp_char == 'y'){
-                temp_char = '\0';
-                temp_flag = 0;
+            else{
+                temp_flag = 1;
             }
         }
-        else{
-            temp_flag = 1;
+        sleep(5);
+        pthread_join(KIAadapter->receiver_thread_id, NULL);
+        pthread_join(MCMadapter->receiver_thread_id, NULL);
+        std::cout << "==================================================" << "\n";
+        std::cout << "Control Enabled \n";
+        std::cout << "==================================================" << "\n";
+        std::cout << "Object Value (km/h?) : ";
+        std::cin >> obj;
+        while(1){
+            KIAadapter->pid_decision(obj);
+            if(MCMadapter->mcm_state_update()){
+                std::cout << "Control Diabled\n";
+                std::cout << "Do again? 0:yes 1:no" << "\n";
+                std::cin >> temp_flag_;
+                if(temp_flag_ == 1)
+                    exit(0);
+            }
         }
     }
-    sleep(5);
-    std::cout << "==================================================" << "\n";
-    std::cout << "Control Enabled \n";
-    std::cout << "==================================================" << "\n";
-    std::cout << "Object Value (km/h?) : ";
-    std::cin >> obj;
-    while(1){
-        KIAadapter->pid_decision(obj);
-    }
-    pthread_join(KIAadapter->receiver_thread_id, NULL);
-    pthread_join(MCMadapter->receiver_thread_id, NULL);
     delete KIAadapter;
     delete MCMadapter;
     sleep(1.1);
