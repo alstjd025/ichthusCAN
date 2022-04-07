@@ -57,6 +57,29 @@ SocketCAN::SocketCAN(DeviceType type)
   }
 }
 
+SocketCAN::SocketCAN(DeviceType type, std::queue<CanMessage::WHL_SPD>& KIA_queue,\
+                std::mutex& KIA_lock):CANAdapter(), sockfd(-1), receiver_thread_id(0){
+  if(type == DeviceType::KIACAN){
+    velocity = &KIA_queue;
+    KIA_Queue_lock = &KIA_lock;
+    mcm_data = nullptr;
+    crc_checker = CRC8(0x07, 0x00, false, false, 0x00, false);
+    adapter_type = ADAPTER_SOCKETCAN;
+    devicetype = type;
+    printf("KIACAN adapter created.\n");
+  }
+  else if(type == DeviceType::MCM){
+    velocity = &KIA_queue;
+    KIA_Queue_lock = &KIA_lock;
+    mcm_data = new std::queue<CanMessage::MCM_DATA>;
+    crc_checker = CRC8(0x07, 0x00, false, false, 0x00, false);
+    adapter_type = ADAPTER_SOCKETCAN;
+    devicetype = type;
+    initialize_mcm_State();
+    printf("MCM adapter created.\n");
+  }
+}
+
 //  Not Implemented
 SocketCAN::SocketCAN()
 {
@@ -212,7 +235,7 @@ static void* socketcan_receiver_thread(void* argv)
       if (sock->reception_handler != NULL)
         sock->reception_handler(&rx_frame);
       else if(sock->pid_reception_handler != NULL)
-        sock->pid_reception_handler(&rx_frame, sock->velocity, sock->KIA_Queue_lock);
+        sock->pid_reception_handler(&rx_frame, sock->velocity, *sock->KIA_Queue_lock);
       else if(sock->mcm_reception_handler != NULL)
         sock->mcm_reception_handler(&rx_frame, sock->mcm_data, sock->MCM_Queue_lock);
     }
@@ -253,7 +276,7 @@ void SocketCAN::start_receiver_thread()
 void SocketCAN::pid_decision(float obj){
 
   float currenct_velocity = 0;
-  KIA_Queue_lock.lock();
+  KIA_Queue_lock->lock();
   if(!velocity->empty()){
     currenct_velocity += velocity->front().FL; //Front Left
     currenct_velocity += velocity->front().FR; //Front Right
@@ -261,7 +284,7 @@ void SocketCAN::pid_decision(float obj){
     currenct_velocity += velocity->front().RR; //Rear Right
     currenct_velocity /= 4;
     velocity->pop();
-    KIA_Queue_lock.unlock();
+    KIA_Queue_lock->unlock();
 
     float velocity_err = obj - currenct_velocity;
 
@@ -273,7 +296,7 @@ void SocketCAN::pid_decision(float obj){
     return;
   }
   else
-    KIA_Queue_lock.unlock();  
+    KIA_Queue_lock->unlock();  
   return;
 }
 

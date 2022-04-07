@@ -53,6 +53,8 @@
 
 std::unique_ptr<dbcppp::INetwork> net;
 std::unordered_map<uint64_t, const dbcppp::IMessage*> messages;
+std::queue<CanMessage::WHL_SPD> KIA_QUEUE;
+std::mutex KIA_LOCK;
 
 
 void Clear()
@@ -181,12 +183,12 @@ void pid_test(char* mcm, char* kia){
     id.push_back(902);  //WHL_SPD11     WHL_SPD_FL, FR, RL, RR
     load_dbc(id);
     
-    SocketCAN* KIAadapter = new SocketCAN(DeviceType::KIACAN);
+    SocketCAN* KIAadapter = new SocketCAN(DeviceType::KIACAN, KIA_QUEUE, KIA_LOCK);
     KIAadapter->pid_reception_handler = &rx_pid_ichthus_handler;
     KIAadapter->open(kia);
     KIAadapter->start_receiver_thread();
     
-    SocketCAN* MCMadapter = new SocketCAN(DeviceType::MCM);
+    SocketCAN* MCMadapter = new SocketCAN(DeviceType::MCM, KIA_QUEUE, KIA_LOCK);
     MCMadapter->mcm_reception_handler = &rx_mcm_ichthus_handler;
     MCMadapter->open(mcm);
     MCMadapter->start_receiver_thread();
@@ -198,8 +200,8 @@ void pid_test(char* mcm, char* kia){
             MCMadapter->send_control_request(BRAKE_ID, true);
             MCMadapter->send_control_request(ACCEL_ID, true);
             MCMadapter->send_control_request(STEER_ID, true);
-            std::cout << "Send Control Request, Waiting for Response (10s)\n";
-            sleep(10);
+            std::cout << "Send Control Request, Waiting for Response (3s)\n";
+            sleep(3);
             if(MCMadapter->mcm_state_update() != true){
                 std::cout << "Control Enable Failed \n";
                 std::cout << "Try Again? [y/n] \n";
@@ -226,7 +228,7 @@ void pid_test(char* mcm, char* kia){
         std::cout << "Object Value (km/h?) : ";
         std::cin >> obj;
         while(1){
-            KIAadapter->pid_decision(obj);
+            MCMadapter->pid_decision(obj);
             if(MCMadapter->mcm_state_update()){
                 std::cout << "Control Diabled\n";
                 std::cout << "Do again? 0:yes 1:no" << "\n";

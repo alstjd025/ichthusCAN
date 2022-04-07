@@ -60,7 +60,7 @@ class SocketCAN: public CANAdapter
     //nullptr when KIACAN sock
     std::queue<CanMessage::MCM_DATA>* mcm_data;
     
-    std::mutex KIA_Queue_lock;
+    std::mutex* KIA_Queue_lock;
     std::mutex MCM_Queue_lock;
     std::mutex MCM_State_lock;
 
@@ -114,6 +114,8 @@ class SocketCAN: public CANAdapter
     /** Constructor */
     SocketCAN();
     SocketCAN(DeviceType type);
+    SocketCAN(DeviceType type, std::queue<CanMessage::WHL_SPD>& KIA_queue,\
+                std::mutex& KIA_lock);
     /** Destructor */
     ~SocketCAN();
 
