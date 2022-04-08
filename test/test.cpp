@@ -49,6 +49,13 @@
 00000001 00100000 00000001 00000000 10000110 10000111 00000000
 10000001 00100000 00000001 00000000 10000110 00000000 00000000
 
+
+ TODO (20220408) MinsungKim
+   1. Fix Switching logic between ThrottlePID & BrakePID (Reference legacy ichthus_controller)
+   2. Implement SteeringPID simple as ThrottlePID (use reference Steering Wheel Position from KIA CAN)
+
+
+
 */
 
 std::unique_ptr<dbcppp::INetwork> net;
