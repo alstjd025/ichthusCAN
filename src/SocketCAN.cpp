@@ -6,6 +6,8 @@
 
 #ifndef MINGW
 
+#define PIDTEST
+
 #include <SocketCAN.h>
 #include <stdio.h>
 // strncpy
@@ -216,6 +218,7 @@ static void* socketcan_receiver_thread(void* argv)
   can_frame_t rx_frame;
 
   // Run until termination signal received
+  #ifndef PIDTEST
   while (!sock->terminate_receiver_thread)
   {
     // Clear descriptor set
@@ -245,6 +248,20 @@ static void* socketcan_receiver_thread(void* argv)
       sock->terminate_receiver_thread = true;
     }
   }
+  #endif
+  #ifdef PIDTEST  //Send dummy data to queueu
+  CanMessage::WHL_SPD temp_spd;
+  temp_spd.FL = 10;
+  temp_spd.FR = 10;
+  temp_spd.RL = 10;
+  temp_spd.RR = 10;
+  while(1){
+    sock->KIA_Queue_lock->lock();
+    sock->velocity->push(temp_spd);  
+    sock->KIA_Queue_lock->unlock();
+    sleep(1);
+  }
+  #endif
 
   printf("[RX] Thread terminated.\n");
 

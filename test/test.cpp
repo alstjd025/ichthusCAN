@@ -19,6 +19,7 @@
 //for queue
 #include <queue>
 
+#define PIDTEST
 
 /*
 // How To Test in VCAN0 (Virtual Can)
@@ -203,6 +204,10 @@ void pid_test(char* mcm, char* kia){
     
     std::cout << "==================================================" << "\n";
     while(temp_flag_ == 0){
+        #ifdef PIDTEST
+        std::cout << "PID TEST,, SKIP Control Request \n";
+        #endif
+        #ifndef PIDTEST
         while(temp_flag == 0){
             MCMadapter->send_control_request(BRAKE_ID, true);
             MCMadapter->send_control_request(ACCEL_ID, true);
@@ -226,9 +231,10 @@ void pid_test(char* mcm, char* kia){
                 temp_flag = 1;
             }
         }
-        sleep(5);
         pthread_join(KIAadapter->receiver_thread_id, NULL);
         pthread_join(MCMadapter->receiver_thread_id, NULL);
+        #endif
+        sleep(5);
         std::cout << "==================================================" << "\n";
         std::cout << "Control Enabled \n";
         std::cout << "==================================================" << "\n";
@@ -236,6 +242,7 @@ void pid_test(char* mcm, char* kia){
         std::cin >> obj;
         while(1){
             MCMadapter->pid_decision(obj);
+            #ifndef PIDTEST
             if(MCMadapter->mcm_state_update()){
                 std::cout << "Control Diabled\n";
                 std::cout << "Do again? 0:yes 1:no" << "\n";
@@ -243,6 +250,7 @@ void pid_test(char* mcm, char* kia){
                 if(temp_flag_ == 1)
                     exit(0);
             }
+            #endif
         }
     }
     delete KIAadapter;
