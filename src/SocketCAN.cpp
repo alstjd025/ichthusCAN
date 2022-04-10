@@ -6,8 +6,6 @@
 
 #ifndef MINGW
 
-#define PIDTEST
-
 #include <SocketCAN.h>
 #include <stdio.h>
 // strncpy
@@ -302,7 +300,7 @@ void SocketCAN::pid_decision(float obj){
     currenct_velocity /= 4;
     velocity->pop();
     KIA_Queue_lock->unlock();
-
+    std::cout << "Cur Vel : " << currenct_velocity << "\n";
     float velocity_err = obj - currenct_velocity;
 
     if(velocity_err > 0){ //buffer 만들기 
@@ -321,7 +319,7 @@ void SocketCAN::throttle_pid_control(float err){
   float velocity_error;
   float integral = 0;
 
-  float max_output = 0.1; // 속도 신호의 최댓값
+  float max_output = 0.3; // 속도 신호의 최댓값
   can_frame_t send_data;
   velocity_error = err;
   
@@ -329,7 +327,8 @@ void SocketCAN::throttle_pid_control(float err){
   float i_term = thr_Ki * integral;
   float d_term = thr_Kd * (velocity_error - velocity_error_last);
 
-  float output = p_term + i_term + d_term; // pid 계산값 ,, p_term만 가지고 제어한 후 d_term과 I_term으로 추가제어
+  float output = p_term; /*+ i_term + d_term*/ // pid 계산값 ,, p_term만 가지고 제어한 후 d_term과 I_term으로 추가제어
+  std::cout << "output : " << output << "\n";
 
   if(output >= max_output){
       output = max_output;
@@ -440,10 +439,17 @@ bool SocketCAN::mcm_state_update(){
       }
     }
   }
+  /*
   MCM_Queue_lock.unlock();
   if(MCM_State_subsys1.Brake_Control_State == 1 && MCM_State_subsys1.Accel_Control_State == 1 &&\
       MCM_State_subsys1.Steer_Control_State == 1 && MCM_State_subsys2.Brake_Control_State == 1 &&\
       MCM_State_subsys2.Accel_Control_State == 1 && MCM_State_subsys2.Steer_Control_State == 1){
+      MCM_State_lock.unlock();
+    return true;
+  }
+  */
+  MCM_Queue_lock.unlock();
+  if(MCM_State_subsys1.Accel_Control_State == 1 && MCM_State_subsys2.Accel_Control_State == 1){
       MCM_State_lock.unlock();
     return true;
   }
@@ -476,6 +482,7 @@ void SocketCAN::make_can_frame(unsigned int id_hex, float_hex_convert converter\
     data.data[0] = DEFAULT_BUS;
     //data.data[1] = ACCEL_ID;
     data.data[2] = NONE;
+    std::cout << "data : " << converter.val << "\n";
     memcpy(data.data+3, converter.data, sizeof(float));
     break;
   }

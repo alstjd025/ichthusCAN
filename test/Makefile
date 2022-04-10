@@ -1,5 +1,5 @@
 HOMEDIR = /home/misys/
-INCDIR = $(HOMEDIR)libcan/
+INCDIR = $(HOMEDIR)ichthusCAN/
 
 OBJ = test
 
@@ -15,7 +15,7 @@ INC += -I$(INCDIR)include/
 LIBDBC = dbcppp
 LIBCAN = can
 
-LIBDIR = $(HOMEDIR)libcan/
+LIBDIR = $(HOMEDIR)ichthusCAN/
 
 
 

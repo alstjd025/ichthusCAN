@@ -35,9 +35,9 @@ CPPFLAGS += -O3
 # Required for linking to shared library:
 CPPFLAGS += -fPIC
 
-CPPFLAGS += -I$(INCDIR) -I/home/misys/libcan
+CPPFLAGS += -I$(INCDIR) -I/home/misys/ichthusCAN
 CPPFLAGS += -pthread
-CPPFLAGS += -L/home/misys/libcan/
+CPPFLAGS += -L/home/misys/ichthusCAN/
 CPPFLAGS += -ldbcppp
 
 
