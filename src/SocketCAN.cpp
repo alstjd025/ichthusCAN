@@ -288,7 +288,7 @@ void SocketCAN::start_receiver_thread()
   // Can only transmitt can_frame after this wait
   
 }
-void SocketCAN::pid_decision(float obj){
+void SocketCAN::pid_decision(float ref){
 
   float currenct_velocity = 0;
   KIA_Queue_lock->lock();
@@ -348,11 +348,7 @@ void SocketCAN::throttle_pid_control(float err){
     
   
 }
-/*
-다ㅁ배 주류 접ㅏㅣ 쉬ㅁ
 
-
-*/
 void SocketCAN::brake_pid_control(float err){
   float velocity_error;
   float integral = 0;
@@ -385,6 +381,33 @@ void SocketCAN::brake_pid_control(float err){
 
   brk_output_last = output;
   brk_velocity_error_last = velocity_error;
+
+}
+
+void SocketCAN::steer_pid_control(float err){
+  float velocity_error;
+  float max_output = 0.1; 
+
+  can_frame_t send_data;
+
+  velocity_error = err;
+  
+  float p_term = ste_Kp * velocity_error;
+  float i_term = ste_Ki * integral;
+  float d_term = ste_Kd * (velocity_error - ste_velocity_error_last);
+
+  float output = p_term + i_term + d_term; // pid 계산값
+  
+  
+  integral += (velocity_error);
+  float_hex_convert temp;
+  temp.val = output;
+  send_data.data[1] = STE_ID;
+  make_can_frame(COMMAND_ID, temp, send_data);
+  transmit(send_data);
+
+  ste_output_last = output;
+  ste_velocity_error_last = velocity_error;
 
 }
 

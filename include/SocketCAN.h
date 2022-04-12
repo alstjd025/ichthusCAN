@@ -105,11 +105,25 @@ class SocketCAN: public CANAdapter
     float br_Ki = 0;
     float br_Kd = 0;
 
+    float ste_Kp = 0.01;
+    float ste_Ki = 0;
+    float ste_Kd = 0;
+
+    float br_Kp = 0;
+    float br_Ki = 0;
+    float br_Kd = 0;
+
     float thr_output_last; 
     float thr_velocity_error_last;
+    float thr_integral = 0;
 
     float brk_output_last; 
     float brk_velocity_error_last;
+    float brk_integral = 0;
+
+    float ste_output_last; 
+    float ste_velocity_error_last;
+    float ste_integral = 0;
 
     /** Constructor */
     SocketCAN();
@@ -152,9 +166,11 @@ class SocketCAN: public CANAdapter
     /*
      *  PID_Controller functions
      */
-    void pid_decision(float obj);
+    void pid_decision(float ref);
     void throttle_pid_control(float err);
     void brake_pid_control(float err);
+
+    void steer_pid_control(float err);
 
     void send_control_request(uint8_t interface, bool enable);
 
