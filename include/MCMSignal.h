@@ -10,6 +10,13 @@
 
 #define SUBSYS_MASK 10000000
 
+//  [COMMENT FOR ROS2 BRINGUP]
+//  Please use these types for data transformation and packaging
+//  float_hex_convert   -> needed for pid control node
+//  MCM_MESSAGE_TYPE    -> needed for pid control node
+//  MCM_STATE           -> needed for pid control node
+//  MCM_DATA            -> needed for pid control node
+//  WHL_SPD             -> no more need
 
 union float_hex_convert{
     unsigned int hex;

@@ -19,7 +19,9 @@
 //for queue
 #include <queue>
 
-#define PIDTEST
+//#define PIDTEST
+#define THROTTLETEST
+
 
 /*
 // How To Test in VCAN0 (Virtual Can)
@@ -56,7 +58,18 @@
    2. Implement SteeringPID simple as ThrottlePID (use reference Steering Wheel Position from KIA CAN)
 
 
-
+//  [COMMENT FOR ROS2 BRINGUP]
+//  Some logics which used for sharing data between threads(locks, queue, etc..)
+//  are no more needed because in ROS2 we will use ROS2 msg publish & Subscribe logic.
+//  
+//  rx_pid_ichthus_handler()           -> needed for KIA driver node (already implemented)
+//  rx_mcm_ichthus_handler()           -> needed for MCM driver node 
+//  pid_test()                         -> needed for PID node  
+//   ㄴ Recieving reference speed from user using CLI is an Experimental Logic, subject to change.              
+//  test_interface()                   -> needed for PID node(need more discussion)
+//
+//
+//
 */
 
 std::unique_ptr<dbcppp::INetwork> net;
@@ -209,9 +222,11 @@ void pid_test(char* mcm, char* kia){
         #endif
         #ifndef PIDTEST
         while(temp_flag == 0){
-            MCMadapter->send_control_request(BRAKE_ID, true);
             MCMadapter->send_control_request(ACCEL_ID, true);
+            #ifndef THROTTLETEST
+            MCMadapter->send_control_request(BRAKE_ID, true);
             MCMadapter->send_control_request(STEER_ID, true);
+            #endif
             std::cout << "Send Control Request, Waiting for Response (3s)\n";
             sleep(3);
             if(MCMadapter->mcm_state_update() != true){

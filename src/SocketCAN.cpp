@@ -6,7 +6,8 @@
 
 #ifndef MINGW
 
-#define PIDTEST
+//#define PIDTEST
+#define THROTTLETEST
 
 #include <SocketCAN.h>
 #include <stdio.h>
@@ -33,8 +34,18 @@
 */
 
 
-// Constructer For SocketCAN
-// 
+// [COMMENT FOR ROS2 BRINGUP]
+//  Socketcan Constructor
+//    ㄴCRC8(0x07)             -> needed for MCM driver node 
+//  pid_decision()            -> needed for pid node
+//  throttle_pid_control()    -> needed for pid node
+//  brake_pid_control()       -> needed for pid node
+//  initialize_mcm_state()    -> needed for pid node (temporary)
+//  mcm_state_update()        -> needed for pid node (temporary)
+//  send_control_request()    -> needed for pid node
+//  make_can_frame()          -> needed for MCM driver node
+//  crc_8()                   -> needed for MCM driver node
+
 SocketCAN::SocketCAN(DeviceType type)
   :CANAdapter(),
   sockfd(-1),
@@ -441,12 +452,20 @@ bool SocketCAN::mcm_state_update(){
     }
   }
   MCM_Queue_lock.unlock();
+  #ifndef THROTTLETEST
   if(MCM_State_subsys1.Brake_Control_State == 1 && MCM_State_subsys1.Accel_Control_State == 1 &&\
       MCM_State_subsys1.Steer_Control_State == 1 && MCM_State_subsys2.Brake_Control_State == 1 &&\
       MCM_State_subsys2.Accel_Control_State == 1 && MCM_State_subsys2.Steer_Control_State == 1){
       MCM_State_lock.unlock();
     return true;
   }
+  #endif
+  #ifdef THROTTLETEST
+  if(MCM_State_subsys1.Accel_Control_State == 1 && MCM_State_subsys2.Accel_Control_State == 1){
+      MCM_State_lock.unlock();
+    return true;
+  }
+  #endif
   MCM_State_lock.unlock();
   return false;
 }
@@ -474,7 +493,6 @@ void SocketCAN::make_can_frame(unsigned int id_hex, float_hex_convert converter\
     data.can_dlc = 8;
     data.can_id = id_hex;
     data.data[0] = DEFAULT_BUS;
-    //data.data[1] = ACCEL_ID;
     data.data[2] = NONE;
     memcpy(data.data+3, converter.data, sizeof(float));
     break;
