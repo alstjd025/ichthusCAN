@@ -97,7 +97,7 @@ class SocketCAN: public CANAdapter
      *  Class Values for using
      */
 
-    float thr_Kp = 0;
+    float thr_Kp = 0.01;
     float thr_Ki = 0;
     float thr_Kd = 0;
 
