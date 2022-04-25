@@ -385,21 +385,21 @@ void SocketCAN::brake_pid_control(float err){
 }
 
 void SocketCAN::steer_pid_control(float err){
-  float velocity_error;
+  float angle_error;
   float max_output = 0.1; 
 
   can_frame_t send_data;
 
-  velocity_error = err;
+  angle_error = err;
   
-  float p_term = ste_Kp * velocity_error;
-  float i_term = ste_Ki * integral;
-  float d_term = ste_Kd * (velocity_error - ste_velocity_error_last);
+  float p_term = ste_Kp * angle_error;
+  float i_term = ste_Ki * ste_integral;
+  float d_term = ste_Kd * (angle_error - ste_velocity_error_last);
 
   float output = p_term + i_term + d_term; // pid 계산값
   
   
-  integral += (velocity_error);
+  ste_integral += (angle_error);
   float_hex_convert temp;
   temp.val = output;
   send_data.data[1] = STE_ID;
@@ -407,7 +407,7 @@ void SocketCAN::steer_pid_control(float err){
   transmit(send_data);
 
   ste_output_last = output;
-  ste_velocity_error_last = velocity_error;
+  ste_velocity_error_last = angle_error;
 
 }
 
